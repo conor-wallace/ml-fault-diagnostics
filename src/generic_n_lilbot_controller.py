@@ -33,10 +33,10 @@ DEBUG_ENABLED = 1
 #last_time = 0
 last_check_time = 0
 xv = wv = xv1 = xv2 = 0
-g_enabled = 1
-g_testing_enabled = 0
-max_vel_x = 220
-max_vel_w = 240
+g_enabled = 0
+g_testing_enabled = 1
+max_vel_x = 1
+max_vel_w = 30
 segments = 64
 increment = 48
 total_increments = 1
@@ -78,9 +78,15 @@ G_Integrator = 0
 Kv_p = 335
 Kv_i = 0
 Kv_d = 0
-Kh_p = 33
+Kh_p = 40 #33
 Kh_i = 0.5
-Kh_d = 10
+Kh_d = 20 #10
+Kv_pt = 2
+Kv_it = 0
+Kv_dt = 0
+Kh_pt = 0.1 #33
+Kh_it = 0.0
+Kh_dt = 0.0 #10
 time_series = []
 x_pos = []
 y_pos = []
@@ -88,6 +94,7 @@ first_time = 0
 stamp_time = 0
 last_time = 0
 error = []
+test_path = []
 x = 0
 
 test_theta = 0
@@ -103,8 +110,6 @@ def sgn(a):
    return 1
 
 pose_pub = rospy.Publisher("lilbot_SIMULATION/pose", PoseStamped, queue_size=1, tcp_nodelay=True)
-max_vel_x = 150
-max_vel_w = 240
 
 def enableCallback(data):
     global g_enabled
@@ -146,23 +151,23 @@ def updateTopicList():
     i = 0
     last_time = rospy.get_time()
     for topic in topic_list:
-       print "topic is ", topic[0]
+       # print "topic is ", topic[0]
        if "pose" in topic[0]	 and "lilbot" in topic[0]:
           ns = topic[0].split("/")[1]
 
           if DEBUG_ENABLED:
-             print "Topic: [%s] is a lilbot topic" % topic[0]
+             # print "Topic: [%s] is a lilbot topic" % topic[0]
              print "ns is ", ns
 
           if ns not in publishers.keys():
              publishers[ns] = rospy.Publisher(ns + "/cmd", Int16MultiArray, queue_size=1, tcp_nodelay=True)
-             print "Found a new lilbot pose topic, adding to control list"
+             # print "Found a new lilbot pose topic, adding to control list"
           last_x[ns] = 0
           last_last_x[ns] = 0
           i = i + 1
 
 def listPoseTopicManagers():
-    print publishers.keys()
+    # print publishers.keys()
     for publisher in publishers:
         print publisher
 
@@ -172,8 +177,8 @@ def generateTestData(robot_ns):
    #x = rospy.Time.now().to_sec()*0.25
    #print("working")
    if not first_time:
-       x = rospy.Time.now().to_sec()*10
-   delta_x = rospy.Time.now().to_sec()*10 - x
+       x = rospy.Time.now().to_sec()*0.5
+   delta_x = rospy.Time.now().to_sec()*0.5 - x
    dx_target = -1 * (math.sin(delta_x+np.pi))
    dy_target = -1 * (math.cos(delta_x+np.pi)+1)
    dx_trans = test_x
@@ -241,6 +246,8 @@ def generateTestData(robot_ns):
    error.append(gamma_error)
    print("v error: %s" % v_error)
    print("gamma error: %s" % gamma_error)
+   test_path.append([dx_trans, dy_trans])
+   print(len(test_path))
 
    curr_time = rospy.Time.now().to_sec()
    if not first_time:
@@ -270,33 +277,47 @@ def generateTestData(robot_ns):
    test_y = test_y + y_dot*delta_t
    d = math.sqrt((test_x-desired_x)**2+(test_y-desired_y)**2)
    print test_x, test_y
-   #if d < 0.3:
-   #   desired_y = desired_y * -1
 
 def get_PID(v_error, gamma_error, delta_t):
-    global Kv_p, Kv_i, Kv_d, Kh_p, Kh_i, Kh_d, V_Derivator, V_Integrator, G_Derivator, G_Integrator, max_vel_w, max_vel_x
+    global Kv_p, Kv_i, Kv_d, Kh_p, Kh_i, Kh_d, Kv_pt, Kv_it, Kv_dt, Kh_pt, Kh_it, Kh_dt, V_Derivator, V_Integrator, G_Derivator, G_Integrator, max_vel_w, max_vel_x
     # PID for Distance error
-    print v_error, gamma_error
-    V_Proportional = v_error * Kv_p
 
-    V_Derivative = ((v_error - V_Derivator) * Kv_d) / delta_t
+    if g_testing_enabled:
+        Kvp = Kv_pt
+        Kvi = Kv_it
+        Kvd = Kv_dt
+        Khp = Kh_pt
+        Khi = Kh_it
+        Khd = Kh_dt
+    else:
+        Kvp = Kv_p
+        Kvi = Kv_i
+        Kvd = Kv_d
+        Khp = Kh_p
+        Khi = Kh_i
+        Khd = Kh_d
+
+    print v_error, gamma_error
+    V_Proportional = v_error * Kvp
+
+    V_Derivative = ((v_error - V_Derivator) * Kvd) / delta_t
     V_Derivator = v_error
 
     V_Integrator = v_error + V_Integrator
     V_Integrator = np.clip(V_Integrator, -max_vel_x, max_vel_x)
-    V_Integral = V_Integrator * Kv_i
+    V_Integral = V_Integrator * Kvi
 
     V_PID = V_Proportional + V_Integral + V_Derivative
 
     # PID for Heading error
-    G_Proportional = gamma_error * Kh_p
+    G_Proportional = gamma_error * Khp
 
-    G_Derivative = ((gamma_error - G_Derivator) * Kh_d) / delta_t
+    G_Derivative = ((gamma_error - G_Derivator) * Khd) / delta_t
     G_Derivator = gamma_error
 
     G_Integrator = gamma_error + G_Integrator
     G_Integrator = np.clip(G_Integrator, -max_vel_w, max_vel_w)
-    G_Integral = G_Integrator * Kh_i
+    G_Integral = G_Integrator * Khi
 
     G_PID = G_Proportional + G_Integral + G_Derivative
 
@@ -389,6 +410,7 @@ if __name__ == '__main__':
                 stamp_time = trans.header.stamp.to_sec()
                 dx_trans = round(trans.transform.translation.x, 3)
                 dy_trans = round(trans.transform.translation.y, 3)
+                print("x: %s y: %s" % (dx_trans, dy_trans))
                 path.append([dx_trans, dy_trans])
 
                 quaternion_target = (
@@ -412,9 +434,9 @@ if __name__ == '__main__':
                 yaw_trans = round(euler_trans[2], 3)
 
                 desired_heading = (math.degrees(math.atan2((dy_target - dy_trans), (dx_target - dx_trans)) % (2 * math.pi)))
-                print("desired heading: %s" % desired_heading)
+                # print("desired heading: %s" % desired_heading)
                 current_heading = (math.degrees(yaw_trans % (2 * math.pi)))
-                print("current heading: %s" % current_heading)
+                # print("current heading: %s" % current_heading)
 
                 #if(desired_heading < 180):
                  #   desired_heading += 360
@@ -426,14 +448,14 @@ if __name__ == '__main__':
 
                 v_error = round(math.sqrt(math.pow((dx_target - dx_trans), 2) + math.pow((dy_target - dy_trans), 2)), 5)
 
-                print("v error: %s" % v_error)
-                print("gamma error: %s" % gamma_error)
+                # print("v error: %s" % v_error)
+                # print("gamma error: %s" % gamma_error)
 
                 curr_time = trans.header.stamp.to_sec()
                 if not first_time:
                     first_time = curr_time
 
-                print(curr_time - first_time)
+                # print(curr_time - first_time)
                 delta_t = (stamp_time - last_time)
                 delta_t = (delta_t if delta_t != 0 else 0.1)
                 time_series.append((curr_time - first_time)*1000)
@@ -462,19 +484,20 @@ if __name__ == '__main__':
                 lilbot_vel.ang_vel = int(gamma)
                 lilbot_vel.header.stamp = rospy.Time.now()
 
-                print("V, GAMMA")
-                print(xv1, wv)
+                # print("V, GAMMA")
+                # print(xv1, wv)
 
-            if len(error) > 400:
+            if len(test_path) > 200:
                 msg.data = [0,0,0,0]
                 publishers[publisher].publish(msg)
                 vel_pub.publish(lilbot_vel)
-                print "publishing"
+                # print "publishing"
+                test_path = np.asarray(test_path)
 
-                plt.plot(time_series, error, label='Heading Error')
-                plt.xlabel('time (ms)')
-                plt.ylabel('error')
-                plt.title('Lilbot Path Error')
+                plt.plot(test_path[:, 0], test_path[:, 1], label='UGV Position')
+                plt.xlabel('x')
+                plt.ylabel('y')
+                plt.title('UGV Path Error')
                 plt.legend()
                 plt.show()
 
@@ -484,6 +507,6 @@ if __name__ == '__main__':
                 msg.data = [int(-xv1),int(-xv2),0,int(-wv)]
                 publishers[publisher].publish(msg)
                 vel_pub.publish(lilbot_vel)
-                print "publishing"
+                # print "publishing"
 
         rate.sleep()
