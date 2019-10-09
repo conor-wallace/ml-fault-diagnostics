@@ -8,26 +8,37 @@ from network_faults.msg import Network, Velocity
 
 txrx_pl = 0
 txrx_td = 0
+offset = 0
 path_data = []
-count = 1.0
+count = 0
 pl_percent = 0.0
 stop = 0
 
 def gotdata(txrx):
-    global txrx_pl,txrx_td, path_data, count, pl_percent, stop
+    global offset, txrx_pl,txrx_td, path_data, count, pl_percent, stop
 
     if not stop:
         txrx_pl = txrx.packet_loss
-        txrx_td = txrx.time_delay
-        pl_percent += txrx_pl
-        path_data.append([count, (pl_percent/count)])
-        count += 1
+        if offset == 0:
+            offset = txrx_pl
+        seq_val = txrx_pl - offset
+        print("seq, count: %s %s" % (seq_val, count))
+        if count != seq_val:
+            dropped_packets = [1] * (seq_val-count)
+            path_data.extend(dropped_packets)
+            count = seq_val
+        else:
+            path_data.append(0)
+            count += 1
 
-        print("Packet Loss: %s, Time Delay: %s" % (txrx_pl, txrx_td))
-        print("Packet Loss Percentage: %s" % (pl_percent/count))
-        print(count)
+        print("Packet Loss Percentage: %s" % (float(pl_percent)/float(count)))
+        print(len(path_data))
 
         if len(path_data) == 200:
+            sum = 0
+            for i in range(len(path_data)):
+                sum += int(path_data[i])
+            print("Mean Percentage of Packet Loss: %s" % (float(sum/len(path_data))))
             stop = 1
 
 rospy.init_node('GetData', anonymous=True)
@@ -38,8 +49,9 @@ while not rospy.is_shutdown():
     if stop:
         print("converting data to csv")
         path_data = np.asarray(path_data)
+        path_t = np.arange(len(path_data))
 
-        plt.plot(path_data[:, 0], path_data[:, 1])
+        plt.plot(path_t[:], path_data[:])
         plt.xlabel('t')
         plt.ylabel('Packet Loss %')
         plt.title('Packet Loss CDF')

@@ -4,7 +4,7 @@ import std_msgs
 from network_faults.msg import Network
 import subprocess, re
 
-hostname = "192.168.1.180"
+hostname = "192.168.1.114"
 
 rospy.init_node('agent1_stats', anonymous=True)
 network_stats = rospy.Publisher("/network_stats", Network, queue_size=1, tcp_nodelay=True)

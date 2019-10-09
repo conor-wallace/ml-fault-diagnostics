@@ -1,3 +1,3 @@
 Header header
-float32 lin_vel
-float32 ang_vel
+float64 lin_vel
+float64 ang_vel
