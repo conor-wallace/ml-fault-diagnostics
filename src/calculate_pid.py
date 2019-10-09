@@ -152,6 +152,7 @@ while not rospy.is_shutdown():
     gamma = np.clip(gamma, -max_vel_w, max_vel_w)
     last_time = curr_time
     print("v gamma: %s %s" % (v, gamma))
+    print("")
 
     lilbot_vel.lin_vel = int(v)
     lilbot_vel.ang_vel = int(gamma)
