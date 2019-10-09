@@ -28,14 +28,16 @@ G_Integrator = 0
 Kv_pt = 2
 Kv_it = 0
 Kv_dt = 0
-Kh_pt = 0.1 #33
-Kh_it = 0.0
-Kh_dt = 0.0 #10
+Kh_pt = 0.05 #33
+Kh_it = 0.0125
+Kh_dt = 0.001 #10
 first_time = 0
 stamp_time = 0
 last_time = 0
-max_vel_x = 5
+max_vel_x = 1
 max_vel_w = 30
+time_series = []
+error = []
 
 def get_PID(v_error, gamma_error, delta_t):
     global Kv_pt, Kv_it, Kv_dt, Kh_pt, Kh_it, Kh_dt, V_Derivator, V_Integrator, G_Derivator, G_Integrator, max_vel_w, max_vel_x
@@ -133,6 +135,7 @@ while not rospy.is_shutdown():
         if current_heading >= 0.0 and current_heading <= 90.0:
             current_heading += 360
     gamma_error = desired_heading - current_heading
+    error.append(gamma_error)
 
     v_error = round(math.sqrt(math.pow((dx_target - dx_trans), 2) + math.pow((dy_target - dy_trans), 2)), 5)
 
@@ -142,6 +145,7 @@ while not rospy.is_shutdown():
     curr_time = trans.header.stamp.to_sec()
     if not first_time:
         first_time = curr_time
+    time_series.append((curr_time - first_time)*1000)
 
     # print(curr_time - first_time)
     delta_t = (stamp_time - last_time)
@@ -154,8 +158,26 @@ while not rospy.is_shutdown():
     print("v gamma: %s %s" % (v, gamma))
     print("")
 
-    lilbot_vel.lin_vel = int(v)
-    lilbot_vel.ang_vel = int(gamma)
+
+    if len(error) == 200:
+        lilbot_vel.lin_vel = 1000
+        lilbot_vel.ang_vel = 0
+        lilbot_vel.header.stamp = rospy.Time.now()
+        vel_pub.publish(lilbot_vel)
+        time_series = np.asarray(time_series)
+        error = np.asarray(error)
+
+        plt.plot(time_series[:], error[:], label='UGV Position')
+        plt.xlabel('x')
+        plt.ylabel('y')
+        plt.title('UGV Path Error')
+        plt.legend()
+        plt.show()
+
+        sys.exit(1)
+
+    lilbot_vel.lin_vel = v
+    lilbot_vel.ang_vel = gamma
     lilbot_vel.header.stamp = rospy.Time.now()
     vel_pub.publish(lilbot_vel)
     rate.sleep()
