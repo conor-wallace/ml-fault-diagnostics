@@ -87,7 +87,7 @@ while not rospy.is_shutdown():
         dy_trans = test_y
         yaw_trans = test_theta
     # perform the broadcasting
-    noise_level = np.random.randint(0, 2)*0.01*0.5
+    noise_level = np.random.random.normal(0.0, 0.01)*0.01*0.5
     print("noise: %s" % noise_level)
     br = tf2_ros.TransformBroadcaster()
     t = geometry_msgs.msg.TransformStamped()
