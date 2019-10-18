@@ -48,6 +48,12 @@ test_theta = 0
 test_x = 0.0
 test_y = 0.0
 
+target_theta = 0.0
+dx_target = 0.0
+dy_target = 0.0
+v_target = 0.1
+gamma_target = 30
+
 def getPIDCallback(data):
     global v, gamma, max_vel_w, max_vel_x, first_read
     print(data.lin_vel, data.ang_vel)
@@ -71,21 +77,6 @@ listener = tf2_ros.TransformListener(tfBuffer)
 rate = rospy.Rate(10.0)
 while not rospy.is_shutdown():
     current_time = rospy.get_time()
-    if first_read == 0:
-        x = rospy.Time.now().to_sec()*0.5
-        delta_x = rospy.Time.now().to_sec()*0.5 - x
-        dx_target = 0.0
-        dy_target = 0.0
-        dx_trans = 0
-        dy_trans = 0
-        yaw_trans = 0
-    else:
-        delta_x = rospy.Time.now().to_sec()*0.5 - x
-        dx_target = -1 * (math.sin(delta_x+np.pi))
-        dy_target = -1 * (math.cos(delta_x+np.pi)+1)
-        dx_trans = test_x
-        dy_trans = test_y
-        yaw_trans = test_theta
     # perform the broadcasting
     noise_level = np.random.normal(0.0, 0.01)*0.01*0.5
     print("noise: %s" % noise_level)
@@ -112,7 +103,7 @@ while not rospy.is_shutdown():
     t.transform.translation.x = dx_target
     t.transform.translation.y = dy_target
     t.transform.translation.z = 0.0
-    q = tf_conversions.transformations.quaternion_from_euler(0, 0, 0)
+    q = tf_conversions.transformations.quaternion_from_euler(0, 0, target_theta)
     t.transform.rotation.x = q[0]
     t.transform.rotation.y = q[1]
     t.transform.rotation.z = q[2]
@@ -120,7 +111,6 @@ while not rospy.is_shutdown():
     rospy.Time.now()
     br.sendTransform(t)
 
-    test_path.append([dx_trans, dy_trans])
     delta_x = dx_target - test_x
     delta_y = dy_target - test_y
 
@@ -145,13 +135,19 @@ while not rospy.is_shutdown():
     last_time = curr_time
 
     L = 0.19
-    lr = 0.1
     theta_dot = ((v/L)*(math.tan(gamma)))
     x_dot = v * math.cos(test_theta)
     y_dot = v * math.sin(test_theta)
     test_theta = test_theta + theta_dot*delta_t
     test_x = test_x + x_dot*delta_t
     test_y = test_y + y_dot*delta_t
+
+    target_theta_dot = ((v_target/L)*(math.tan(gamma_target)))
+    target_x_dot = v_target * math.cos(target_theta)
+    target_y_dot = v_target * math.sin(target_theta)
+    target_theta = target_theta + target_theta_dot*delta_t
+    dx_target = dx_target + target_x_dot*delta_t
+    dy_target = dy_target + target_y_dot*delta_t
 
     if stop == 1:
         sys.exit(1)
