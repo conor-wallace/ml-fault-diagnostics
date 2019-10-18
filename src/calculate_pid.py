@@ -28,16 +28,18 @@ G_Integrator = 0
 Kv_pt = 2
 Kv_it = 0
 Kv_dt = 0
-Kh_pt = 0.05 #33
-Kh_it = 0.0125
-Kh_dt = 0.001 #10
+Kh_pt = 0.04 #33
+Kh_it = 0.01
+Kh_dt = 0.0028 #10
 first_time = 0
 stamp_time = 0
 last_time = 0
 max_vel_x = 1
 max_vel_w = 30
 time_series = []
-error = []
+x_error = []
+y_error = []
+t_error = []
 
 def get_PID(v_error, gamma_error, delta_t):
     global Kv_pt, Kv_it, Kv_dt, Kh_pt, Kh_it, Kh_dt, V_Derivator, V_Integrator, G_Derivator, G_Integrator, max_vel_w, max_vel_x
@@ -124,7 +126,10 @@ while not rospy.is_shutdown():
     pitch_trans = euler_trans[1]
     yaw_trans = round(euler_trans[2], 3)
 
-    desired_heading = (math.degrees(math.atan2((dy_target - dy_trans), (dx_target - dx_trans)) % (2 * math.pi)))
+    delta_x = dx_target - dx_trans
+    delta_y = dy_target - dy_trans
+
+    desired_heading = (math.degrees(math.atan2((delta_y), (delta_x)) % (2 * math.pi)))
     # print("desired heading: %s" % desired_heading)
     current_heading = (math.degrees(yaw_trans % (2 * math.pi)))
     # print("current heading: %s" % current_heading)
@@ -134,10 +139,9 @@ while not rospy.is_shutdown():
     if desired_heading >= 270.0 and desired_heading <= 360.0:
         if current_heading >= 0.0 and current_heading <= 90.0:
             current_heading += 360
-    gamma_error = desired_heading - current_heading
-    error.append(gamma_error)
+    delta_theta = desired_heading - current_heading
 
-    v_error = round(math.sqrt(math.pow((dx_target - dx_trans), 2) + math.pow((dy_target - dy_trans), 2)), 5)
+    v_error = round(math.sqrt(math.pow((delta_x), 2) + math.pow((delta_y), 2)), 5)
 
     # print("v error: %s" % v_error)
     # print("gamma error: %s" % gamma_error)
@@ -158,20 +162,30 @@ while not rospy.is_shutdown():
     print("v gamma: %s %s" % (v, gamma))
     print("")
 
+    x_error.append(delta_x)
+    y_error.append(delta_y)
+    t_error.append(delta_theta)
 
-    if len(error) == 200:
+    if len(x_error) == 200:
         lilbot_vel.lin_vel = 1000
         lilbot_vel.ang_vel = 0
         lilbot_vel.header.stamp = rospy.Time.now()
         vel_pub.publish(lilbot_vel)
         time_series = np.asarray(time_series)
-        error = np.asarray(error)
+        x_error = np.asarray(x_error)
+        y_error = np.asarray(y_error)
+        t_error = np.asarray(t_error)
 
-        plt.plot(time_series[:], error[:], label='UGV Position')
-        plt.xlabel('x')
-        plt.ylabel('y')
-        plt.title('UGV Path Error')
-        plt.legend()
+        fig, (ax1, ax2, ax3) = plt.subplots(1,3)
+
+        ax1.plot(time_series[:], x_error[:], color='b')
+        ax2.plot(time_series[:], y_error[:], color='r')
+        ax3.plot(time_series[:], t_error[:], color='y')
+
+        ax1.set(xlabel='t', ylabel='x error', title='X Error vs Time')
+        ax2.set(xlabel='t', ylabel='y error', title='Y Error vs. Time')
+        ax3.set(xlabel='t', ylabel='theta error', title='Theta Error vs. Time')
+
         plt.show()
 
         sys.exit(1)
