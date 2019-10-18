@@ -28,9 +28,9 @@ G_Integrator = 0
 Kv_pt = 3.25
 Kv_it = 0.0
 Kv_dt = 0.0
-Kh_pt = 0.05 #33
-Kh_it = 0.01
-Kh_dt = 0.0028 #10
+Kh_pt = 0.025 #33
+Kh_it = 0.012
+Kh_dt = 0.0045 #10
 first_time = 0
 stamp_time = 0
 last_time = 0
@@ -40,6 +40,7 @@ time_series = []
 x_error = []
 y_error = []
 t_error = []
+d_error = []
 
 def get_PID(v_error, gamma_error, delta_t):
     global Kv_pt, Kv_it, Kv_dt, Kh_pt, Kh_it, Kh_dt, V_Derivator, V_Integrator, G_Derivator, G_Integrator, max_vel_w, max_vel_x
@@ -157,6 +158,7 @@ while not rospy.is_shutdown():
     x_error.append(delta_x)
     y_error.append(delta_y)
     t_error.append(delta_theta)
+    d_error.append(v_error)
 
     if len(x_error) == 200:
         lilbot_vel.lin_vel = 1000
@@ -167,16 +169,19 @@ while not rospy.is_shutdown():
         x_error = np.asarray(x_error)
         y_error = np.asarray(y_error)
         t_error = np.asarray(t_error)
+        d_error = np.asarray(d_error)
 
-        fig, (ax1, ax2, ax3) = plt.subplots(1,3)
+        fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1)
 
         ax1.plot(time_series[:], x_error[:], color='b')
         ax2.plot(time_series[:], y_error[:], color='r')
         ax3.plot(time_series[:], t_error[:], color='y')
+        ax4.plot(time_series[:], d_error[:], color='g')
 
         ax1.set(xlabel='t', ylabel='x error', title='X Error vs Time')
         ax2.set(xlabel='t', ylabel='y error', title='Y Error vs. Time')
-        ax3.set(xlabel='t', ylabel='theta error', title='Theta Error vs. Time')
+        ax3.set(xlabel='t', ylabel='theta error', title='Theta Error with Kh_d = %s' % Kh_dt)
+        ax4.set(xlabel='t', ylabel='distance error', title='Distance Error vs. Time')
 
         plt.show()
 
