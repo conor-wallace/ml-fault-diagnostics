@@ -25,9 +25,9 @@ G_Derivative = 0
 G_Integral = 0
 G_Derivator = 0
 G_Integrator = 0
-Kv_pt = 2
-Kv_it = 0
-Kv_dt = 0
+Kv_pt = 3.25
+Kv_it = 0.0
+Kv_dt = 0.0
 Kh_pt = 0.04 #33
 Kh_it = 0.01
 Kh_dt = 0.0028 #10
@@ -69,15 +69,15 @@ def get_PID(v_error, gamma_error, delta_t):
 
     G_PID = G_Proportional + G_Integral + G_Derivative
 
-    print("v P: %s" % V_Proportional)
-    print("v I: %s" % V_Integral)
-    print("v D: %s" % V_Derivative)
-    print("v PID: %s" % V_PID)
-
-    print("gamma P: %s" % G_Proportional)
-    print("gamma I: %s" % G_Integral)
-    print("gamma D: %s" % G_Derivative)
-    print("gamma PID: %s" % G_PID)
+    # print("v P: %s" % V_Proportional)
+    # print("v I: %s" % V_Integral)
+    # print("v D: %s" % V_Derivative)
+    # print("v PID: %s" % V_PID)
+    #
+    # print("gamma P: %s" % G_Proportional)
+    # print("gamma I: %s" % G_Integral)
+    # print("gamma D: %s" % G_Derivative)
+    # print("gamma PID: %s" % G_PID)
 
     return V_PID, G_PID
 
@@ -99,12 +99,10 @@ while not rospy.is_shutdown():
 
     dx_target = round(trans_to_target.transform.translation.x, 3)
     dy_target = round(trans_to_target.transform.translation.y, 3)
-    print("x*: %s y*: %s" % (dx_target, dy_target))
 
     stamp_time = trans.header.stamp.to_sec()
     dx_trans = round(trans.transform.translation.x, 3)
     dy_trans = round(trans.transform.translation.y, 3)
-    print("x: %s y: %s" % (dx_trans, dy_trans))
 
     quaternion_target = (
         trans_to_target.transform.rotation.x,
@@ -130,21 +128,14 @@ while not rospy.is_shutdown():
     delta_y = dy_target - dy_trans
 
     desired_heading = (math.degrees(math.atan2((delta_y), (delta_x)) % (2 * math.pi)))
-    # print("desired heading: %s" % desired_heading)
     current_heading = (math.degrees(yaw_trans % (2 * math.pi)))
-    # print("current heading: %s" % current_heading)
 
-    #if(desired_heading < 180):
-     #   desired_heading += 360
     if desired_heading >= 270.0 and desired_heading <= 360.0:
         if current_heading >= 0.0 and current_heading <= 90.0:
             current_heading += 360
     delta_theta = desired_heading - current_heading
 
     v_error = round(math.sqrt(math.pow((delta_x), 2) + math.pow((delta_y), 2)), 5)
-
-    # print("v error: %s" % v_error)
-    # print("gamma error: %s" % gamma_error)
 
     curr_time = trans.header.stamp.to_sec()
     if not first_time:
@@ -155,13 +146,14 @@ while not rospy.is_shutdown():
     delta_t = (stamp_time - last_time)
     delta_t = (delta_t if delta_t != 0 else 0.1)
 
-    v, gamma = get_PID(v_error, gamma_error, delta_t)
+    v, gamma = get_PID(v_error, delta_theta, delta_t)
     v = np.clip(v, -max_vel_x, max_vel_x)
     gamma = np.clip(gamma, -max_vel_w, max_vel_w)
     last_time = curr_time
-    print("v gamma: %s %s" % (v, gamma))
-    print("")
 
+    print("x error: %s" % delta_x)
+    print("y error: %s" % delta_y)
+    print("theta error: %s" % delta_theta)
     x_error.append(delta_x)
     y_error.append(delta_y)
     t_error.append(delta_theta)
