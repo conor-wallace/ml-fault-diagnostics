@@ -87,14 +87,15 @@ while not rospy.is_shutdown():
         dy_trans = test_y
         yaw_trans = test_theta
     # perform the broadcasting
-    noise_level = 0.01*0.5
+    noise_level = np.random.randint(0, 2)*0.01*0.5
+    print("noise: %s" % noise_level)
     br = tf2_ros.TransformBroadcaster()
     t = geometry_msgs.msg.TransformStamped()
     t.header.stamp = rospy.Time.now()
     t.header.frame_id = "odom";#"base_link"
     t.child_frame_id = "lilbot_SIMULATION/Base Frame"
-    t.transform.translation.x = test_x+np.random.rand()*noise_level
-    t.transform.translation.y = test_y+np.random.rand()*noise_level
+    t.transform.translation.x = test_x+noise_level
+    t.transform.translation.y = test_y+noise_level
     t.transform.translation.z = 0.0
     q = tf_conversions.transformations.quaternion_from_euler(0, 0, test_theta)
     t.transform.rotation.x = q[0]
