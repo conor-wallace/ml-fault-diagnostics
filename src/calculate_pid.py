@@ -12,6 +12,7 @@ import math
 import tf2_ros
 import tf_conversions
 import geometry_msgs.msg
+from sklearn.metrics import mean_squared_error, explained_variance_score
 
 V_PID = 0
 G_PID = 0
@@ -28,9 +29,9 @@ G_Integrator = 0
 Kv_pt = 3.25
 Kv_it = 0.0
 Kv_dt = 0.0
-Kh_pt = 0.025 #33
-Kh_it = 0.012
-Kh_dt = 0.0045 #10
+Kh_pt = 0.0375 #33
+Kh_it = 0.0075
+Kh_dt = 0.00425 #10
 first_time = 0
 stamp_time = 0
 last_time = 0
@@ -160,7 +161,7 @@ while not rospy.is_shutdown():
     t_error.append(delta_theta)
     d_error.append(v_error)
 
-    if len(x_error) == 200:
+    if len(x_error) == 500:
         lilbot_vel.lin_vel = 1000
         lilbot_vel.ang_vel = 0
         lilbot_vel.header.stamp = rospy.Time.now()
@@ -170,6 +171,10 @@ while not rospy.is_shutdown():
         y_error = np.asarray(y_error)
         t_error = np.asarray(t_error)
         d_error = np.asarray(d_error)
+        t_true = np.zeros(t_error.shape[0])
+        var = np.var(t_error)
+        mse = mean_squared_error(t_true, t_error)
+        print("variance: %s, mean square error: %s" % (round(var, 3), round(mse, 3)))
 
         fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1)
 
