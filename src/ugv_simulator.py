@@ -84,9 +84,9 @@ while not rospy.is_shutdown():
         yaw_trans = 0
     else:
         delta_x = rospy.Time.now().to_sec()*0.5 - x
-        noise_level = np.random.normal(0.0, 0.000000001)*0.1
+        noise_level = np.random.normal(0.0, 0.000000001)*0.0
         print("time: %s" % delta_x)
-        fault_level = 0.000025*(np.exp(0.01*count)-1)
+        fault_level = 0.0275*(np.exp(0.005*count)-1)
         print("fault level: %s" % fault_level)
         count += 1
         dx_target = -1 * (math.sin(delta_x+np.pi))
