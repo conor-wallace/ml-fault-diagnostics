@@ -84,9 +84,9 @@ while not rospy.is_shutdown():
         yaw_trans = 0
     else:
         delta_x = rospy.Time.now().to_sec()*0.5 - x
-        noise_level = np.random.normal(0.0, 0.000000001)*0.0
+        noise_level = np.random.normal(0.01, 0.001)
         print("time: %s" % delta_x)
-        fault_level = 0.0275*(np.exp(0.005*count)-1)
+        fault_level = 0.0*(np.exp(0.005*count)-1)
         print("fault level: %s" % fault_level)
         count += 1
         dx_target = -1 * (math.sin(delta_x+np.pi))
@@ -101,8 +101,8 @@ while not rospy.is_shutdown():
     t.header.stamp = rospy.Time.now()
     t.header.frame_id = "odom";#"base_link"
     t.child_frame_id = "lilbot_SIMULATION/Base Frame"
-    t.transform.translation.x = test_x+noise_level+fault_level
-    t.transform.translation.y = test_y+noise_level+fault_level
+    t.transform.translation.x = test_x+noise_level
+    t.transform.translation.y = test_y+noise_level
     t.transform.translation.z = 0.0
     q = tf_conversions.transformations.quaternion_from_euler(0, 0, test_theta)
     t.transform.rotation.x = q[0]
@@ -157,7 +157,7 @@ while not rospy.is_shutdown():
     print("theta_dot %s" % theta_dot)
     x_dot = v * math.cos(test_theta)
     y_dot = v * math.sin(test_theta)
-    test_theta = test_theta + theta_dot*delta_t
+    test_theta = test_theta + theta_dot*delta_t + noise_level
     test_x = test_x + x_dot*delta_t
     test_y = test_y + y_dot*delta_t
 

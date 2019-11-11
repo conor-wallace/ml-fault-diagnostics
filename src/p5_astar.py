@@ -1,9 +1,7 @@
+from p5 import *
 import matplotlib.pyplot as plt
 import numpy as np
 import math
-import sys
-import rospy
-from network_faults.msg import Coordinate, Path
 
 class Node():
     def __init__(self, parent, position):
@@ -14,6 +12,16 @@ class Node():
         self.g = 0
         self.h = 0
         self.wall = 0
+
+    def show(self, color):
+        global w, h
+        background(0)
+        stroke(0)
+        if self.wall != 1:
+            fill(color[0], color[1], color[2])
+        else:
+            fill(0, 0, 0)
+        rect((self.position[0]*w, self.position[1]*h), w, h)
 
     def addNeighbors(self, grid):
         x = self.position[0]
@@ -35,13 +43,13 @@ class Node():
         if (x < cols - 1) and (y < rows - 1):
             self.neighbors.append(grid[x + 1, y + 1])
 
-cols = 40
-rows = 40
+cols = 10
+rows = 10
 w = 0
 h = 0
 start = None
 end = None
-grid = np.empty((rows, cols), dtype=object)
+grid = np.empty((rows, cols), dtype=Node)
 open_list = []
 closed_list = []
 path = []
@@ -60,6 +68,7 @@ def heuristic(a, b):
 
 def setup():
     global grid, open_list, closed_list, w, h, start, end
+    size(640, 640)
 
     w = 640 / cols
     h = 640 / rows
@@ -72,8 +81,8 @@ def setup():
         for j in range(grid.shape[1]):
             grid[i, j].addNeighbors(grid)
 
-    wall1 = [[20,30],[21,30],[22,30],[23,30],[24,30],[25,30],[26,30],[27,30],[28,30],[29,30],[30,30]]
-    wall1 = np.reshape(wall1, (11, 2))
+    wall1 = [[4,7],[5,7],[6,7],[7,7]]
+    wall1 = np.reshape(wall1, (4, 2))
     wall2 = np.flip(wall1, 1)
 
     wall1_count = 0
@@ -81,23 +90,44 @@ def setup():
 
     for i in range(grid.shape[0]):
         for j in range(grid.shape[1]):
-            if wall1_count <= 10:
+            if wall1_count <= 3:
                 if i == wall1[wall1_count, 0] and j == wall1[wall1_count, 1]:
                     grid[i, j].wall = 1
                     wall1_count += 1
-            if wall2_count <= 10:
+            if wall2_count <= 3:
                 if i == wall2[wall2_count, 0] and j == wall2[wall2_count, 1]:
                     grid[i, j].wall = 1
                     wall2_count += 1
 
     start = grid[0, 0]
-    end = grid[35, 35]
+    end = grid[9, 9]
+
+    # wall1 = [[20,30],[21,30],[22,30],[23,30],[24,30],[25,30],[26,30],[27,30],[28,30],[29,30],[30,30]]
+    # wall1 = np.reshape(wall1, (11, 2))
+    # wall2 = np.flip(wall1, 1)
+    #
+    # wall1_count = 0
+    # wall2_count = 0
+    #
+    # for i in range(grid.shape[0]):
+    #     for j in range(grid.shape[1]):
+    #         if wall1_count <= 10:
+    #             if i == wall1[wall1_count, 0] and j == wall1[wall1_count, 1]:
+    #                 grid[i, j].wall = 1
+    #                 wall1_count += 1
+    #         if wall2_count <= 10:
+    #             if i == wall2[wall2_count, 0] and j == wall2[wall2_count, 1]:
+    #                 grid[i, j].wall = 1
+    #                 wall2_count += 1
+    #
+    # start = grid[0, 0]
+    # end = grid[35, 35]
     open_list.append(start)
 
-def astar():
+def draw():
     global grid, open_list, closed_list, start, end, path
     #A* algorithm
-    while len(open_list) > 0:
+    if len(open_list) > 0:
         winner = 0
         for i in range(len(open_list)):
             if open_list[i].f < open_list[winner].f:
@@ -105,14 +135,9 @@ def astar():
 
         current = open_list[winner]
         if current == end:
+            no_loop()
             print("done")
-            temp = current
-            path = []
-            path.append(temp.position)
-            while temp.previous:
-                path.append(temp.previous.position)
-                temp = temp.previous
-            return path
+            return
 
         removeFromArray(open_list, current)
         closed_list.append(current)
@@ -138,32 +163,26 @@ def astar():
                     neighbor.h = heuristic(neighbor, end)
                     neighbor.f = neighbor.g + neighbor.h
                     neighbor.previous = current
+    else:
+        print("no solution")
 
-setup()
-path = astar()
-path.append([-1000, -1000])
+    #draw figure
+    for i in range(grid.shape[0]):
+        for j in range(grid.shape[1]):
+            grid[i][j].show([255, 255, 255])
 
-# print(path)
-# fig, (ax1) = plt.subplots(1, 1)
-#
-# ax1.plot(path[:, 0], path[:, 1], color='b')
-# ax1.set(xlabel='x', ylabel='y', title='Optimal Path')
-#
-# plt.show()
+    for node in closed_list:
+        node.show([255, 0, 0])
 
-sent = 0
-rospy.init_node('path_planner')
-path_pub = rospy.Publisher('/path', Path, queue_size=1, tcp_nodelay=True)
-pathPub = Path()
-points = []
-for i in range(len(path)):
-    print(path[i])
-    coordinate = Coordinate()
-    coordinate.coordinate = path[i]
-    points.append(coordinate)
+    for node in open_list:
+        node.show([0, 0, 255])
 
-pathPub.path = points
-rate = rospy.Rate(10.0)
-while not rospy.is_shutdown():
-    path_pub.publish(pathPub)
-    rate.sleep()
+    temp = current
+    path = []
+    while temp.previous:
+        path.append(temp.previous)
+        temp = temp.previous
+
+    for i in range(len(path)):
+        path[i].show([0, 255, 0])
+run()
