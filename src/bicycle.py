@@ -1,4 +1,5 @@
 import math
+import csv
 import numpy as np
 import matplotlib.pyplot as plt
 from pid import PID
@@ -32,12 +33,16 @@ class Bicycle():
         self.x = self.x + np.clip(x_dot, -1*self.max_vel, self.max_vel)
         self.y = self.y + np.clip(y_dot, -1*self.max_vel, self.max_vel)
 
-    def driveAlongPath(self):
+    def driveAlongPath(self, index, pid, return_dict, plot):
+        # print(pid.k)
+        self.pid.k = pid.k
         i = len(self.path) - 2
         self.x = 0#path[i+1, 0]
         self.y = 0#path[i+1, 1]
         self.theta = math.radians(45)
         astar_path = []
+        x_error = []
+        y_error = []
         t_error = []
         d_error = []
 
@@ -59,6 +64,8 @@ class Bicycle():
                 # print("theta error: %s" % delta_theta)
                 # print("current [x, y]: [%s, %s]" % (self.x, self.y))
                 # print("distance error: %s" % distance)
+                x_error.append([delta_x])
+                y_error.append([delta_y])
                 t_error.append([delta_theta])
                 d_error.append([distance])
                 self.desired_path.append([self.desired_x, self.desired_y, self.desired_theta])
@@ -67,32 +74,59 @@ class Bicycle():
                 self.dynamics(self.pid.v, self.pid.g)
                 j = j - 1
             i = i - 1
-        #
-        # astar_path = np.asarray(astar_path)
-        # plt.plot(astar_path[:, 0], astar_path[:, 1])
-        # plt.xlabel('x')
-        # plt.ylabel('y')
-        # plt.title('UGV Path')
-        # plt.show()
-        #
-        # time = np.arange(len(t_error))
-        # t_error = np.asarray(t_error)
-        # plt.plot(time[:], t_error[:, 0])
-        # plt.xlabel('t')
-        # plt.ylabel('theta')
-        # plt.title('UGV Theta Error')
-        # plt.show()
-        #
-        # d_error = np.asarray(d_error)
-        # plt.plot(time[:], d_error[:, 0])
-        # plt.xlabel('t')
-        # plt.ylabel('yl2 norm')
-        # plt.title('UGV Distance Error')
-        # plt.show()
+        pid.fitness = self.objective()
+        return_dict[index] = pid.fitness
+
+        if plot:
+            self.astar_path = np.asarray(self.astar_path)
+            plt.plot(self.astar_path[:, 0], self.astar_path[:, 1])
+            plt.xlabel('x')
+            plt.ylabel('y')
+            plt.title('UGV Path')
+            plt.show()
+
+            time = np.arange(len(t_error))
+            x_error = np.array(x_error)
+            plt.plot(time[:], x_error[:, 0])
+            plt.xlabel('t')
+            plt.ylabel('x')
+            plt.title('UGV X Trajectory')
+            plt.show()
+
+            y_error = np.array(y_error)
+            plt.plot(time[:], y_error[:, 0])
+            plt.xlabel('t')
+            plt.ylabel('y')
+            plt.title('UGV Y Trajectory')
+            plt.show()
+
+            time = np.arange(len(t_error))
+            t_error = np.asarray(t_error)
+            plt.plot(time[:], t_error[:, 0])
+            plt.xlabel('t')
+            plt.ylabel('theta')
+            plt.title('UGV Theta Error')
+            plt.show()
+
+            d_error = np.asarray(d_error)
+            plt.plot(time[:], d_error[:, 0])
+            plt.xlabel('t')
+            plt.ylabel('yl2 norm')
+            plt.title('UGV Distance Error')
+            plt.show()
+
+            path_data = x_error
+            path_data = np.concatenate((path_data, y_error), axis=1)
+            path_data = np.concatenate((path_data, t_error), axis=1)
+            path_data = np.concatenate((path_data, d_error), axis=1)
+            print(path_data.shape)
+
+            f=open("../data/ga_data.csv",'a')
+            np.savetxt(f, path_data, delimiter=",")
 
     def objective(self):
         fitness = 0
         for i in range(len(self.astar_path)):
-            fitness = fitness + np.linalg.norm(np.array(self.astar_path[i]) - np.array(self.desired_path[i]))**2
+            fitness = fitness + np.linalg.norm(np.array(self.astar_path[i]) - np.array(self.desired_path[i]))
 
         return fitness

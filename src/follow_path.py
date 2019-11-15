@@ -43,11 +43,11 @@ while not rospy.is_shutdown():
 
     if stop and not target:
         k = [0.1, 0.0, 0.0, 1, 0.0, 0.0]
-        test_pid = PID(k)
-        ga = GA(10, 0.01, 1000, Bicycle(path))
+        # test_pid = PID(k)
+        ga = GA(100, 0.35, 100, Bicycle(path))
         ga.setup()
         # ga.population[0] = test_pid
-        ga.fitness()
+        ga.evolve()
 
         target = 1
     rate.sleep()
