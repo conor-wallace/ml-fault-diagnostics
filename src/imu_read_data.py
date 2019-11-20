@@ -53,6 +53,8 @@ imu_msg = IMU()
 
 rate = rospy.Rate(10.0)
 while not rospy.is_shutdown():
+    sys, gyro, accel, mag = bno.get_calibration_status()
+    print("sys: %s, gyro: %s, accel: %s, mag: %s" % (sys,gyro,accel,mag))
     # Read the Euler angles for heading, roll, pitch (all in degrees).
     heading, roll, pitch = bno.read_euler()
     # Read the calibration status, 0=uncalibrated and 3=fully calibrated.
