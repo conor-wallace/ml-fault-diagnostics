@@ -12,6 +12,14 @@ from Adafruit_BNO055 import BNO055
 # below 'bno = ...' lines is uncommented:
 # Raspberry Pi configuration with serial UART and RST connected to GPIO 18:
 bno = BNO055.BNO055(serial_port='/dev/ttyUSB0', rst=18)
+CALIBRATION_FILE = 'data/calibration.json'
+
+# Load calibration from disk.
+with open(CALIBRATION_FILE, 'r') as cal_file:
+    data = json.load(cal_file)
+# Grab the lock on BNO sensor access to serial access to the sensor.
+with bno_changed:
+    bno.set_calibration(data)
 
 # Enable verbose debug logging if -v is passed as a parameter.
 if len(sys.argv) == 2 and sys.argv[1].lower() == '-v':
