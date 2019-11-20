@@ -1,0 +1,9 @@
+float64 roll
+float64 pitch
+float64 yaw
+float64 accel_x
+float64 accel_y
+float64 accel_z
+float64 lin_x
+float64 lin_y
+float64 lin_z

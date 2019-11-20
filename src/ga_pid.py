@@ -54,6 +54,8 @@ class GA():
         return_dict = [0]
         self.bicycle.driveAlongPath(0, self.fittest, return_dict, 1)
 
+        return self.fittest.k
+
     def fitness(self):
         # start_time = timeit.default_timer()
         #

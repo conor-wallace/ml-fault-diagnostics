@@ -3,7 +3,7 @@ import numpy as np
 import math
 import sys
 import rospy
-from network_faults.msg import Coordinate, Path
+from network_faults.msg import Coordinate, Path, ROSpid
 from pid import PID
 from bicycle import Bicycle
 from ga_pid import GA
@@ -26,6 +26,8 @@ def getPathCallback(msg):
 
 rospy.init_node('follow_path')
 rospy.Subscriber("/path", Path, getPathCallback)
+pid_pub = rospy.Publisher('/gain', ROSpid, queue_size=1, tcp_nodelay=True)
+pid_msg = ROSpid()
 
 rate = rospy.Rate(10.0)
 while not rospy.is_shutdown():
@@ -42,12 +44,11 @@ while not rospy.is_shutdown():
                     stop = 1
 
     if stop and not target:
-        k = [0.1, 0.0, 0.0, 1, 0.0, 0.0]
-        # test_pid = PID(k)
-        ga = GA(100, 0.35, 100, Bicycle(path))
+        ga = GA(100, 0.4, 100, Bicycle(path))
         ga.setup()
-        # ga.population[0] = test_pid
-        ga.evolve()
+        optimal_k = ga.evolve()
+        pid_msg.gain = list(optimal_k)
 
         target = 1
+    pid_pub.publish(pid_msg)
     rate.sleep()

@@ -13,6 +13,8 @@ from network_faults.msg import Velocity
 from geometry_msgs.msg import PoseStamped
 from tf.transformations import euler_from_quaternion
 import matplotlib.pyplot as plt
+from pid import PID
+from bicycle import Bicycle
 
 stop = 0
 V_PID = 0
@@ -101,25 +103,10 @@ while not rospy.is_shutdown():
     t.header.stamp = rospy.Time.now()
     t.header.frame_id = "odom";#"base_link"
     t.child_frame_id = "lilbot_SIMULATION/Base Frame"
-    t.transform.translation.x = test_x+noise_level
-    t.transform.translation.y = test_y+noise_level
+    t.transform.translation.x = test_x
+    t.transform.translation.y = test_y
     t.transform.translation.z = 0.0
     q = tf_conversions.transformations.quaternion_from_euler(0, 0, test_theta)
-    t.transform.rotation.x = q[0]
-    t.transform.rotation.y = q[1]
-    t.transform.rotation.z = q[2]
-    t.transform.rotation.w = q[3]
-    rospy.Time.now()
-    br.sendTransform(t)
-
-    t = geometry_msgs.msg.TransformStamped()
-    t.header.stamp = rospy.Time.now()
-    t.header.frame_id =  "odom"
-    t.child_frame_id = "lilbot_SIMULATION/desired_pose"
-    t.transform.translation.x = dx_target
-    t.transform.translation.y = dy_target
-    t.transform.translation.z = 0.0
-    q = tf_conversions.transformations.quaternion_from_euler(0, 0, 0)
     t.transform.rotation.x = q[0]
     t.transform.rotation.y = q[1]
     t.transform.rotation.z = q[2]
@@ -157,7 +144,7 @@ while not rospy.is_shutdown():
     print("theta_dot %s" % theta_dot)
     x_dot = v * math.cos(test_theta)
     y_dot = v * math.sin(test_theta)
-    test_theta = test_theta + theta_dot*delta_t + noise_level
+    test_theta = test_theta + theta_dot*delta_t
     test_x = test_x + x_dot*delta_t
     test_y = test_y + y_dot*delta_t
 
