@@ -10,10 +10,7 @@ import numpy as np
 from std_msgs.msg import Int16MultiArray
 from std_msgs.msg import Int16
 from network_faults.msg import Velocity
-from geometry_msgs.msg import PoseStamped
-from tf.transformations import euler_from_quaternion
 import matplotlib.pyplot as plt
-global xv, wv, last_x, last_last_x, xv1, xv2, g_enabled, publishers, DEBUG_ENABLED, last_time, g_testing_enabled
 
 if __name__ == '__main__':
 
