@@ -15,6 +15,9 @@ from Adafruit_BNO055 import BNO055
 bno = BNO055.BNO055(serial_port='/dev/ttyUSB0', rst=18)
 bno.begin()
 CALIBRATION_FILE = './../data/calibration.json'
+first_read = 1
+data = []
+offset = []
 
 # Load calibration from disk.
 with open(CALIBRATION_FILE, 'r') as cal_file:
@@ -55,68 +58,26 @@ imu_msg = IMU()
 rate = rospy.Rate(10.0)
 while not rospy.is_shutdown():
     sys, gyro, accel, mag = bno.get_calibration_status()
-    print("sys: %s, gyro: %s, accel: %s, mag: %s" % (sys,gyro,accel,mag))
-    # Read the Euler angles for heading, roll, pitch (all in degrees).
     heading, roll, pitch = bno.read_euler()
-    # Read the calibration status, 0=uncalibrated and 3=fully calibrated.
-    # sys, gyro, accel, mag = bno.get_calibration_status()
-    # Print everything out.
-    print('Heading={0:0.2F} Roll={1:0.2F} Pitch={2:0.2F}\tSys_cal={3} Gyro_cal={4} Accel_cal={5} Mag_cal={6}'.format(
-          heading, roll, pitch, sys, gyro, accel, mag))
-    # Other values you can optionally read:
-    # Orientation as a quaternion:
-    #x,y,z,w = bno.read_quaterion()
-    # Sensor temperature in degrees Celsius:
-    #temp_c = bno.read_temp()
-    # Magnetometer data (in micro-Teslas):
-    #x,y,z = bno.read_magnetometer()
-    # Gyroscope data (in degrees per second):
-    #x,y,z = bno.read_gyroscope()
-    # Accelerometer data (in meters per second squared):
     accel_x,accel_y,accel_z = bno.read_accelerometer()
-    # Linear acceleration data (i.e. acceleration from movement, not gravity--
-    # returned in meters per second squared):
     lin_x,lin_y,lin_z = bno.read_linear_acceleration()
-    # Gravity acceleration data (i.e. acceleration just from gravity--returned
-    # in meters per second squared):
-    #x,y,z = bno.read_gravity()
-    # Sleep for a second until the next reading.
-    imu_msg.roll = heading
-    imu_msg.pitch = roll
-    imu_msg.yaw = pitch
-    imu_msg.accel_x = accel_x
-    imu_msg.accel_y = accel_y
-    imu_msg.accel_z = accel_z
-    imu_msg.lin_x = lin_x
-    imu_msg.lin_y = lin_y
-    imu_msg.lin_z = lin_z
+    data.append(heading, roll, pitch, accel_x, accel_y, accel_z, lin_x, lin_y, lin_z)
+    print("sys: %s, gyro: %s, accel: %s, mag: %s" % (sys,gyro,accel,mag))
+    if first_read:
+        offset.append(heading, roll, pitch, accel_x, accel_y, accel_z, lin_x, lin_y, lin_z)
+        first_read = 0
+    else:
+        for i in range(len(data)):
+            data[i] = data[i] - offset[i]
+    imu_msg.yaw = data[0]
+    imu_msg.pitch = data[1]
+    imu_msg.roll = data[2]
+    imu_msg.accel_x = data[3]
+    imu_msg.accel_y = data[4]
+    imu_msg.accel_z = data[5]
+    imu_msg.lin_x = data[6]
+    imu_msg.lin_y = data[7]
+    imu_msg.lin_z = data[8]
+
     imu_pub.publish(imu_msg)
     rate.sleep()
-#
-# while True:
-#     # Read the Euler angles for heading, roll, pitch (all in degrees).
-#     heading, roll, pitch = bno.read_euler()
-#     # Read the calibration status, 0=uncalibrated and 3=fully calibrated.
-#     sys, gyro, accel, mag = bno.get_calibration_status()
-#     # Print everything out.
-#     print('Heading={0:0.2F} Roll={1:0.2F} Pitch={2:0.2F}\tSys_cal={3} Gyro_cal={4} Accel_cal={5} Mag_cal={6}'.format(
-#           heading, roll, pitch, sys, gyro, accel, mag))
-#     # Other values you can optionally read:
-#     # Orientation as a quaternion:
-#     #x,y,z,w = bno.read_quaterion()
-#     # Sensor temperature in degrees Celsius:
-#     #temp_c = bno.read_temp()
-#     # Magnetometer data (in micro-Teslas):
-#     #x,y,z = bno.read_magnetometer()
-#     # Gyroscope data (in degrees per second):
-#     #x,y,z = bno.read_gyroscope()
-#     # Accelerometer data (in meters per second squared):
-#     #x,y,z = bno.read_accelerometer()
-#     # Linear acceleration data (i.e. acceleration from movement, not gravity--
-#     # returned in meters per second squared):
-#     #x,y,z = bno.read_linear_acceleration()
-#     # Gravity acceleration data (i.e. acceleration just from gravity--returned
-#     # in meters per second squared):
-#     #x,y,z = bno.read_gravity()
-#     # Sleep for a second until the next reading.
-#     time.sleep(0.1)
