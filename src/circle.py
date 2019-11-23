@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 if __name__ == '__main__':
 
     rospy.init_node('lilbot_controller_tf2_listener')
-    lilbotPub = rospy.Publisher("/lilbot_6ADE87/cmd", Int16MultiArray, queue_size=1, tcp_nodelay=True)
+    lilbotPub = rospy.Publisher("/lilbot_3BA615/cmd", Int16MultiArray, queue_size=1, tcp_nodelay=True)
     msg = Int16MultiArray()
     rate = rospy.Rate(10.0)
     xv1 = xv2 = xv = wv = 0
