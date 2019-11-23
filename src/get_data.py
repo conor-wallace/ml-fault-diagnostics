@@ -14,6 +14,8 @@ from geometry_msgs.msg import PoseStamped
 from tf.transformations import euler_from_quaternion
 from message_filters import TimeSynchronizer, Subscriber
 
+# TODO: change /dev/ttyUSB0 to /dev/ttyAMA0 in serial_data.py and utils.py in littlebot_155
+
 txrx_pl = 0
 txrx_td = 0
 roll = 0
@@ -30,7 +32,6 @@ stop = 0
 
 def gotDataCallback(imu):
     global stop, msg_data
-    print("in callback")
     print(len(msg_data))
 
     if not stop:
@@ -43,7 +44,6 @@ rospy.init_node('GetData', anonymous=True)
 rospy.Subscriber("/imu", IMU, gotDataCallback)
 rate = rospy.Rate(10.0)
 while not rospy.is_shutdown():
-    print("in loop")
     if stop:
         print("converting data to csv")
         msg_data = np.asarray(msg_data)

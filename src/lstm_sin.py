@@ -8,75 +8,75 @@ from keras.layers import LSTM
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_squared_error
 # convert an array of values into a dataset matrix
-def create_dataset(dataset, look_back=1):
-	# dataX, dataY = [], []
-	# for i in range(len(dataset)-look_back-1):
-	# 	a = dataset[i:(i+look_back), 0]
-	# 	dataX.append(a)
-	# 	dataY.append(dataset[i + look_back, 0])
-    #segment data into features and labels
-    X = []
-    Y = []
+# def create_dataset(dataset, look_back=1):
+	# # dataX, dataY = [], []
+	# # for i in range(len(dataset)-look_back-1):
+	# # 	a = dataset[i:(i+look_back), 0]
+	# # 	dataX.append(a)
+	# # 	dataY.append(dataset[i + look_back, 0])
+    # #segment data into features and labels
+    # X = []
+    # Y = []
+    #
+    # sequence_length = 5*look_back
+    # number_samples = len(dataset) - sequence_length
+    #
+    # for i in range(number_samples):
+    #     #for i = 0, X = sin_wave[0:50], Y = sin_wave[50], i = 0, 1, ..., n
+    #     X.append(dataset[i:i+look_back])
+    #     Y.append(dataset[i+look_back])
+    #
+    # X = numpy.array(X)
+    # X = numpy.expand_dims(X, axis=2)
+    #
+    # Y = numpy.array(Y)
+    # Y = numpy.expand_dims(Y, axis=1)
+    #
+    # X_val = []
+    # Y_val = []
+    #
+    # for i in range(number_samples-look_back, len(dataset)-look_back):
+    #     X_val.append(dataset[i:i+look_back])
+    #     Y_val.append(dataset[i+look_back])
+    #
+    # X_val = numpy.array(X_val)
+    # X_val = numpy.expand_dims(X_val, axis=2)
+    #
+    # Y_val = numpy.array(Y_val)
+    # Y_val = numpy.expand_dims(Y_val, axis=1)
+    # return X, Y, X_val, Y_val
 
-    sequence_length = 5*look_back
-    number_samples = len(dataset) - sequence_length
+def create_dataset(df, lookback):
+    #Drop useless data
+    df = df.drop(['%packet_loss', '%time_delay'], axis=1)
 
-    for i in range(number_samples):
-        #for i = 0, X = sin_wave[0:50], Y = sin_wave[50], i = 0, 1, ..., n
-        X.append(dataset[i:i+look_back])
-        Y.append(dataset[i+look_back])
+    #Split data into positive and negative data
+    df = df.to_numpy()
+    scaler = MinMaxScaler(feature_range=(0, 1))
+    df = scaler.fit_transform(df)
+    normal_df = df[0:401]
+    fault_df = df[400:-1]
 
-    X = numpy.array(X)
-    X = numpy.expand_dims(X, axis=2)
+    #LSTM Requires shape of n_samples, lookback, n_features
+    normalX = []
+    for i in range(normal_df.shape[0] - lookback):
+        sample = normal_df[i:i+lookback]
+        normalX.append(sample)
 
-    Y = numpy.array(Y)
-    Y = numpy.expand_dims(Y, axis=1)
+    faultX = []
+    for i in range(fault_df.shape[0] - lookback):
+        sample = fault_df[i:i+lookback]
+        faultX.append(sample)
 
-    X_val = []
-    Y_val = []
+    normalX = np.array(normalX)
+    faultX = np.array(faultX)
+    normalY = np.zeros(normalX.shape[0])
+    faultY = np.ones(faultX.shape[0])
 
-    for i in range(number_samples-look_back, len(dataset)-look_back):
-        X_val.append(dataset[i:i+look_back])
-        Y_val.append(dataset[i+look_back])
+    dataX = np.concatenate((normalX, faultX), axis=0)
+    dataY = np.concatenate((normalY, faultY), axis=0)
 
-    X_val = numpy.array(X_val)
-    X_val = numpy.expand_dims(X_val, axis=2)
-
-    Y_val = numpy.array(Y_val)
-    Y_val = numpy.expand_dims(Y_val, axis=1)
-    return X, Y, X_val, Y_val
-
-# def create_dataset(df, lookback):
-#     #Drop useless data
-#     df = df.drop(['%packet_loss', '%time_delay'], axis=1)
-#
-#     #Split data into positive and negative data
-#     df = df.to_numpy()
-#     scaler = MinMaxScaler(feature_range=(0, 1))
-#     df = scaler.fit_transform(df)
-#     normal_df = df[0:401]
-#     fault_df = df[400:-1]
-#
-#     #LSTM Requires shape of n_samples, lookback, n_features
-#     normalX = []
-#     for i in range(normal_df.shape[0] - lookback):
-#         sample = normal_df[i:i+lookback]
-#         normalX.append(sample)
-#
-#     faultX = []
-#     for i in range(fault_df.shape[0] - lookback):
-#         sample = fault_df[i:i+lookback]
-#         faultX.append(sample)
-#
-#     normalX = np.array(normalX)
-#     faultX = np.array(faultX)
-#     normalY = np.zeros(normalX.shape[0])
-#     faultY = np.ones(faultX.shape[0])
-#
-#     dataX = np.concatenate((normalX, faultX), axis=0)
-#     dataY = np.concatenate((normalY, faultY), axis=0)
-#
-#     return dataX, dataY
+    return dataX, dataY
 
 
 df = pd.read_csv("~/catkin_ws/src/network_faults/data/path_data.csv")
