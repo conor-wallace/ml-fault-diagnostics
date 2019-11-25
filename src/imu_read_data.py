@@ -1,5 +1,6 @@
 import logging
 import sys
+import subprocess
 import time
 import json
 import matplotlib.pyplot as plt
@@ -12,9 +13,8 @@ from Adafruit_BNO055 import BNO055
 # Create and configure the BNO sensor connection.  Make sure only ONE of the
 # below 'bno = ...' lines is uncommented:
 # Raspberry Pi configuration with serial UART and RST connected to GPIO 18:
-output = subprocess.Popen(["ls", "/dev/ttyUSB*"],stdout = subprocess.PIPE).communicate()[0]
-port = output.decode('utf-8')
-bno = BNO055.BNO055(serial_port=port, rst=18)
+# output = subprocess.Popen(['ls', r'/dev/ttyUSB*'],stdout = subprocess.PIPE).communicate()[0]
+bno = BNO055.BNO055(serial_port='/dev/ttyUSB0', rst=18)
 bno.begin()
 CALIBRATION_FILE = './../data/calibration.json'
 first_read = 1
@@ -63,12 +63,14 @@ while not rospy.is_shutdown():
     heading, roll, pitch = bno.read_euler()
     accel_x,accel_y,accel_z = bno.read_accelerometer()
     lin_x,lin_y,lin_z = bno.read_linear_acceleration()
-    data.append(heading, roll, pitch, accel_x, accel_y, accel_z, lin_x, lin_y, lin_z)
+    data.append([heading, roll, pitch, accel_x, accel_y, accel_z, lin_x, lin_y, lin_z])
     print("sys: %s, gyro: %s, accel: %s, mag: %s" % (sys,gyro,accel,mag))
     if first_read:
-        offset.append(heading, roll, pitch, accel_x, accel_y, accel_z, lin_x, lin_y, lin_z)
+        offset.append([heading, roll, pitch, accel_x, accel_y, accel_z, lin_x, lin_y, lin_z])
         first_read = 0
     else:
+	print(len(data))
+	print(len(offset))
         for i in range(len(data)):
             data[i] = data[i] - offset[i]
     imu_msg.yaw = data[0]
