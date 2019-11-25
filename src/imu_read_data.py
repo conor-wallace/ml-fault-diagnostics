@@ -12,7 +12,9 @@ from Adafruit_BNO055 import BNO055
 # Create and configure the BNO sensor connection.  Make sure only ONE of the
 # below 'bno = ...' lines is uncommented:
 # Raspberry Pi configuration with serial UART and RST connected to GPIO 18:
-bno = BNO055.BNO055(serial_port='/dev/ttyUSB0', rst=18)
+output = subprocess.Popen(["ls", "/dev/ttyUSB*"],stdout = subprocess.PIPE).communicate()[0]
+port = output.decode('utf-8')
+bno = BNO055.BNO055(serial_port=port, rst=18)
 bno.begin()
 CALIBRATION_FILE = './../data/calibration.json'
 first_read = 1
