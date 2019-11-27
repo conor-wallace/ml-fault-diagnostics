@@ -16,7 +16,7 @@ class Bicycle():
         self.k = [0.1, 0.0, 0.0, 1, 0.0, 0.0]
         self.max_rad = 35
         self.max_vel = 2
-        self.L = 0.019
+        self.L = 0.19
         self.iter = 20
         self.pid = PID(self.k)
         self.desired_path = []
