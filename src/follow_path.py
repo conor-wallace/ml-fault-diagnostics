@@ -44,8 +44,10 @@ while not rospy.is_shutdown():
                     stop = 1
 
     if stop and not target:
-        ga = GA(100, 0.4, 100, Bicycle(path))
+        ga = GA(100, 2000, Bicycle(path))
         ga.setup()
+        # return_dict = [0]
+        # ga.bicycle.driveAlongPath(0, ga.fittest, return_dict, 1)
         optimal_k = ga.evolve()
         pid_msg.gain = list(optimal_k)
 

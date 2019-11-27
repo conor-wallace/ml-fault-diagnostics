@@ -10,11 +10,11 @@ import timeit
 # TODO: develope a way to adapt mutation rate as the algorithm converges
 
 class GA():
-    def __init__(self, population, mutation, generations, bicycle):
+    def __init__(self, population, generations, bicycle):
         self.bicycle = bicycle
         self.population_size = population
         self.population = np.empty((self.population_size), dtype=object)
-        self.mutation_rate = mutation
+        self.mutation_rate = 0.75
         self.crossover_point = 3
         self.chromosome_size = 6
         self.number_parents = int(math.sqrt(population))
@@ -22,6 +22,8 @@ class GA():
         self.eta = 5
         self.fittest = PID(bicycle.k)
         self.fittest.fitness = 1000000
+        self.fit_norm = 0.0
+        self.last_norm = 100000.0
 
     def setup(self):
         for i in range(self.population_size):
@@ -95,10 +97,30 @@ class GA():
         print("\n")
         print("fittest parents")
         parents = self.population[0:self.number_parents]
+        fitness = []
         for parent in parents:
+            fitness.append(parent.fitness)
             print(parent.fitness)
 
         self.fittest = parents[0]
+        fitness = np.array(fitness)
+        self.fit_norm = np.linalg.norm(fitness)
+        print("fitness norm")
+        print(self.fit_norm)
+        dt = self.fit_norm
+        if dt < 1000 and dt >= 500:
+            self.mutation_rate = 0.5
+        elif dt < 500 and dt >= 250:
+            self.mutation_rate = 0.35
+        elif dt < 250 and dt >= 100:
+            self.mutation_rate = 0.25
+        elif dt < 100:
+            self.mutation_rate = 0.15
+
+
+
+        print("mutation rate: %s" % self.mutation_rate)
+        self.last_norm = self.fit_norm
 
         return parents
 
@@ -134,17 +156,17 @@ class GA():
             mutate = np.random.uniform(0,1)
             if mutate < self.mutation_rate:
                 if np.random.uniform(0,1) < 0.5:
-                    self.population[i].k[0] = np.random.uniform(low=0, high=2)
+                    self.population[i].k[0] = np.random.uniform(low=0, high=500)
                 if np.random.uniform(0,1) < 0.5:
                     self.population[i].k[1] = np.random.uniform(low=0, high=0.1)
                 if np.random.uniform(0,1) < 0.5:
-                    self.population[i].k[2] = np.random.uniform(low=0, high=0.1)
+                    self.population[i].k[2] = np.random.uniform(low=0, high=250)
                 if np.random.uniform(0,1) < 0.5:
-                    self.population[i].k[3] = np.random.uniform(low=0, high=10)
+                    self.population[i].k[3] = np.random.uniform(low=0, high=500)
                 if np.random.uniform(0,1) < 0.5:
                     self.population[i].k[4] = np.random.uniform(low=0, high=0.1)
                 if np.random.uniform(0,1) < 0.5:
-                    self.population[i].k[5] = np.random.uniform(low=0, high=0.1)
+                    self.population[i].k[5] = np.random.uniform(low=0, high=250)
 
 
     def quickSort(self, x, start, end):

@@ -14,8 +14,8 @@ class Bicycle():
         self.desired_y = 0
         self.desired_theta = 0
         self.k = [0.1, 0.0, 0.0, 1, 0.0, 0.0]
-        self.max_rad = 35
-        self.max_vel = 2
+        self.max_rad = 38.0
+        self.max_vel = 1.0
         self.L = 0.19
         self.iter = 20
         self.pid = PID(self.k)
