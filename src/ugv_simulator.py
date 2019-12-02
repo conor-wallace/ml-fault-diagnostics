@@ -17,24 +17,6 @@ from pid import PID
 from bicycle import Bicycle
 
 stop = 0
-V_PID = 0
-G_PID = 0
-V_Proportional = 0
-V_Derivative = 0
-V_Integral = 0
-V_Derivator = 0
-V_Integrator = 0
-G_Proportional = 0
-G_Derivative = 0
-G_Integral = 0
-G_Derivator = 0
-G_Integrator = 0
-Kv_pt = 2
-Kv_it = 0
-Kv_dt = 0
-Kh_pt = 0.1 #33
-Kh_it = 0.0
-Kh_dt = 0.0 #10
 v = 0.0
 gamma = 0.0
 time_series = []
@@ -46,6 +28,9 @@ first_read = 0
 x = 0
 stop = 0
 count = 0
+max_rad = 38.0
+max_vel = 1.0
+L = 0.19
 
 test_theta = 0
 test_x = 0.0
@@ -63,6 +48,17 @@ def getPIDCallback(data):
     else:
         v = data.lin_vel
         gamma = data.ang_vel
+
+def dynamics(self, v, gamma):
+    #dynamics
+    theta_dot = ((v/self.L)*(math.tan(gamma)))
+    x_dot = v * math.cos(self.theta)
+    y_dot = v * math.sin(self.theta)
+
+    #derivatives
+    self.theta = self.theta + np.clip(theta_dot, -1*math.radians(self.max_rad), math.radians(self.max_rad))
+    self.x = self.x + np.clip(x_dot, -1*self.max_vel, self.max_vel)
+    self.y = self.y + np.clip(y_dot, -1*self.max_vel, self.max_vel)
 
 rospy.init_node('ugv_simulator')
 rospy.Subscriber("/pid", Velocity, getPIDCallback)
@@ -119,12 +115,8 @@ while not rospy.is_shutdown():
     delta_y = dy_target - test_y
 
     desired_heading = (math.degrees(math.atan2((delta_y), (delta_x)) % (2 * math.pi)))
-    # print("desired heading: %s" % desired_heading)
     current_heading = (math.degrees(test_theta % (2 * math.pi)))
-    # print("current heading: %s" % current_heading)
 
-    #if(desired_heading < 180):
-     #   desired_heading += 360
     if desired_heading >= 270.0 and desired_heading <= 360.0:
         if current_heading >= 0.0 and current_heading <= 90.0:
             current_heading += 360
@@ -138,15 +130,14 @@ while not rospy.is_shutdown():
     delta_t = (delta_t if delta_t != 0 else 0.1)
     last_time = curr_time
 
-    L = 0.19
+    #dynamics
     theta_dot = ((v/L)*(math.tan(gamma)))
-    theta_dot = np.clip(theta_dot, -35*delta_t, 35*delta_t)
-    print("theta_dot %s" % theta_dot)
     x_dot = v * math.cos(test_theta)
     y_dot = v * math.sin(test_theta)
-    test_theta = test_theta + theta_dot*delta_t
-    test_x = test_x + x_dot*delta_t
-    test_y = test_y + y_dot*delta_t
+
+    test_theta = test_theta + np.clip(theta_dot, -1*math.radians(max_rad), math.radians(max_rad))
+    test_x = test_x + np.clip(x_dot, -1*max_vel, max_vel)
+    test_y = test_y + np.clip(y_dot, -1*max_vel, max_vel)
 
     if stop == 1:
         sys.exit(1)

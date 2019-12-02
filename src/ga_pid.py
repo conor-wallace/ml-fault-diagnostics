@@ -156,17 +156,17 @@ class GA():
             mutate = np.random.uniform(0,1)
             if mutate < self.mutation_rate:
                 if np.random.uniform(0,1) < 0.5:
-                    self.population[i].k[0] = np.random.uniform(low=0, high=500)
+                    self.population[i].k[0] = np.random.uniform(low=0, high=1000)
                 if np.random.uniform(0,1) < 0.5:
-                    self.population[i].k[1] = np.random.uniform(low=0, high=0.1)
+                    self.population[i].k[1] = np.random.uniform(low=0, high=1)
                 if np.random.uniform(0,1) < 0.5:
-                    self.population[i].k[2] = np.random.uniform(low=0, high=250)
+                    self.population[i].k[2] = np.random.uniform(low=0, high=1000)
                 if np.random.uniform(0,1) < 0.5:
-                    self.population[i].k[3] = np.random.uniform(low=0, high=500)
+                    self.population[i].k[3] = np.random.uniform(low=0, high=1000)
                 if np.random.uniform(0,1) < 0.5:
-                    self.population[i].k[4] = np.random.uniform(low=0, high=0.1)
+                    self.population[i].k[4] = np.random.uniform(low=0, high=1)
                 if np.random.uniform(0,1) < 0.5:
-                    self.population[i].k[5] = np.random.uniform(low=0, high=250)
+                    self.population[i].k[5] = np.random.uniform(low=0, high=1000)
 
 
     def quickSort(self, x, start, end):
@@ -174,7 +174,7 @@ class GA():
             return
         index = self.partition(x, start, end)
         self.quickSort(x, start, index-1)
-        self.quickSort(x, index, start)
+        self.quickSort(x, index + 1, end)
 
     def partition(self, x, start, end):
         pivot_index = start

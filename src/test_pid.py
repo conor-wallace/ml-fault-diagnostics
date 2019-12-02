@@ -24,10 +24,8 @@ def getPathCallback(msg):
         path_msg = msg.path
         first_read = 0
 
-rospy.init_node('follow_path')
+rospy.init_node('test_pid')
 rospy.Subscriber("/path", Path, getPathCallback)
-pid_pub = rospy.Publisher('/gain', ROSpid, queue_size=1, tcp_nodelay=True)
-pid_msg = ROSpid()
 
 rate = rospy.Rate(10.0)
 while not rospy.is_shutdown():
@@ -43,14 +41,11 @@ while not rospy.is_shutdown():
                     print("STOP")
                     stop = 1
 
-    if stop and not target:
-        ga = GA(100, 10000, Bicycle(path))
-        ga.setup()
-        # return_dict = [0]
-        # ga.bicycle.driveAlongPath(0, ga.fittest, return_dict, 1)
-        optimal_k = ga.evolve()
-        pid_msg.gain = list(optimal_k)
-
-        target = 1
-    pid_pub.publish(pid_msg)
+    if stop:
+        model = Bicycle(path)
+        model.pid.k = [0.1, 0.0, 0.0, 1, 0.025, 1.75]
+        return_dict = [0]
+        model.driveAlongPath(0, model.pid, return_dict, 1)
+        print("score: %s" % return_dict[0])
+        sys.exit(1)
     rate.sleep()
