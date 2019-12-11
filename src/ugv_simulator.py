@@ -17,7 +17,11 @@ from pid import PID
 from bicycle import Bicycle
 
 stop = 0
-v = 0.0
+max_rad = 38.0
+max_vel = 1.0
+v_scale = max_vel / 255.0
+g_scale = max_rad / 255.0
+v = 150 * v_scale
 gamma = 0.0
 time_series = []
 test_path = []
@@ -28,40 +32,28 @@ first_read = 0
 x = 0
 stop = 0
 count = 0
-max_rad = 38.0
-max_vel = 1.0
 L = 0.19
+prev_noise = 0.0
 
 test_theta = 0
 test_x = 0.0
 test_y = 0.0
 
-def getPIDCallback(data):
-    global v, gamma, max_vel_w, max_vel_x, first_read
-    print(data.lin_vel, data.ang_vel)
-    if data.lin_vel == 1000:
-        stop = 1
-    if (first_read == 0):
-        first_read = 1
-        v = data.lin_vel
-        gamma = data.ang_vel
-    else:
-        v = data.lin_vel
-        gamma = data.ang_vel
-
-def dynamics(self, v, gamma):
-    #dynamics
-    theta_dot = ((v/self.L)*(math.tan(gamma)))
-    x_dot = v * math.cos(self.theta)
-    y_dot = v * math.sin(self.theta)
-
-    #derivatives
-    self.theta = self.theta + np.clip(theta_dot, -1*math.radians(self.max_rad), math.radians(self.max_rad))
-    self.x = self.x + np.clip(x_dot, -1*self.max_vel, self.max_vel)
-    self.y = self.y + np.clip(y_dot, -1*self.max_vel, self.max_vel)
+# def getPIDCallback(data):
+#     global v, gamma, max_vel_w, max_vel_x, first_read
+#     print(data.lin_vel, data.ang_vel)
+#     if data.lin_vel == 1000:
+#         stop = 1
+#     if (first_read == 0):
+#         first_read = 1
+#         v = data.lin_vel
+#         gamma = data.ang_vel
+#     else:
+#         v = data.lin_vel
+#         gamma = data.ang_vel
 
 rospy.init_node('ugv_simulator')
-rospy.Subscriber("/pid", Velocity, getPIDCallback)
+# rospy.Subscriber("/pid", Velocity, getPIDCallback)
 pose_pub = rospy.Publisher("lilbot_SIMULATION/pose", PoseStamped, queue_size=1, tcp_nodelay=True)
 
 tfBuffer = tf2_ros.Buffer()
@@ -93,11 +85,11 @@ while not rospy.is_shutdown():
         dy_trans = test_y
         yaw_trans = test_theta
     # perform the broadcasting
-    print("noise: %s" % noise_level)
+    # print("noise: %s" % noise_level)
     br = tf2_ros.TransformBroadcaster()
     t = geometry_msgs.msg.TransformStamped()
     t.header.stamp = rospy.Time.now()
-    t.header.frame_id = "odom";#"base_link"
+    t.header.frame_id = "odom"#"base_link"
     t.child_frame_id = "lilbot_SIMULATION/Base Frame"
     t.transform.translation.x = test_x
     t.transform.translation.y = test_y
@@ -135,10 +127,18 @@ while not rospy.is_shutdown():
     x_dot = v * math.cos(test_theta)
     y_dot = v * math.sin(test_theta)
 
-    test_theta = test_theta + np.clip(theta_dot, -1*math.radians(max_rad), math.radians(max_rad))
-    test_x = test_x + np.clip(x_dot, -1*max_vel, max_vel)
-    test_y = test_y + np.clip(y_dot, -1*max_vel, max_vel)
+    a = -0.494
+    b = -0.487
+    c = 0.488
 
-    if stop == 1:
+    noise = a * np.exp(b * test_x) + c
+    delta_t = 0.1 #10 ms
+    test_theta = test_theta + np.clip(theta_dot, -1*math.radians(max_rad), math.radians(max_rad))*delta_t
+    test_x = test_x + np.clip(x_dot, -1*max_vel, max_vel)*delta_t
+    test_y = test_y + np.clip(y_dot, -1*max_vel, max_vel)*delta_t+(noise-prev_noise)
+    prev_noise = noise
+
+    if len(test_path) == 45:
+        print("stop")
         sys.exit(1)
     rate.sleep()

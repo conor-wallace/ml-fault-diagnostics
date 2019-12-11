@@ -5,7 +5,10 @@ import sys
 import csv
 import geometry_msgs
 import std_msgs
+import tf2_ros
+import tf_conversions
 import numpy as np
+from matplotlib import pyplot as plt
 import message_filters
 from network_faults.msg import Network, Velocity, IMU
 from std_msgs.msg import Int16MultiArray
@@ -14,49 +17,69 @@ from geometry_msgs.msg import PoseStamped
 from tf.transformations import euler_from_quaternion
 from message_filters import TimeSynchronizer, Subscriber
 
-# TODO: change /dev/ttyUSB0 to /dev/ttyAMA0 in serial_data.py and utils.py in littlebot_155
-
-txrx_pl = 0
-txrx_td = 0
-roll = 0
-pitch = 0
-yaw = 0
-x = 0
-y = 0
-z = 0
-linear_vel = 0
-angular_vel = 0
-path_data = []
-msg_data = []
-offset = []
-stop = 0
+data = []
+path = []
 first_read = 1
-
-def gotDataCallback(imu):
-    global stop, msg_data, offset
-    print(len(msg_data))
-
-    if first_read:
-        offset.append([imu.pitch, imu.yaw, imu.accel_y, imu.accel_z, imu.lin_x, imu.lin_y, imu.lin_z])
-        first_read = 0
-
-    if not stop:
-        msg_data.append([imu.pitch-offset[0], imu.yaw-offset[1], imu.accel_y-offset[2], imu.accel_z-offset[3], imu.lin_x-offset[4], imu.lin_y-offset[5], imu.lin_z-offset[6]])
-
-        if len(msg_data) == 200:
-            stop = 1
+first_time = 0.0
+samples = 450
+features = 7
 
 rospy.init_node('GetData', anonymous=True)
-rospy.Subscriber("/imu", IMU, gotDataCallback)
-rate = rospy.Rate(10.0)
-while not rospy.is_shutdown():
-    if stop:
-        print("converting data to csv")
-        msg_data = np.asarray(msg_data)
-        msg_data = np.reshape(msg_data, [200, 7])
+rate = rospy.Rate(100.0)
+publisher = 'lilbot_SIMULATION'
+# publisher = 'lilbot_6ADE87'
+tfBuffer = tf2_ros.Buffer()
+listener = tf2_ros.TransformListener(tfBuffer)
+stamp_iter = 0
 
-        f=open("../data/path_data.csv",'a')
-        np.savetxt(f, msg_data, delimiter=",")
+while not rospy.is_shutdown():
+    try:
+        # trans = tfBuffer.lookup_transform(publisher+'/World Frame', publisher+'/Base Frame', rospy.Time())
+        trans = tfBuffer.lookup_transform("odom", publisher+"/Base Frame", rospy.Time())
+    except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
+        rate.sleep()
+        print "Error", e
+        continue
+
+    if first_read:
+        first_time = trans.header.stamp.to_sec()
+        first_read = 0
+
+    stamp_time = trans.header.stamp.to_sec() - first_time
+    stamp_iter += 1
+    dx_trans = round(trans.transform.translation.x, 3)
+    dy_trans = round(trans.transform.translation.y, 3)
+    print("x: %s y: %s" % (dx_trans, dy_trans))
+
+    quaternion_trans = (
+        trans.transform.rotation.x,
+        trans.transform.rotation.y,
+        trans.transform.rotation.z,
+        trans.transform.rotation.w)
+    euler_trans = euler_from_quaternion(quaternion_trans)
+    roll_trans = euler_trans[0]
+    pitch_trans = euler_trans[1]
+    yaw_trans = euler_trans[2]
+
+    data.append([stamp_time, stamp_iter, dx_trans, dy_trans, roll_trans, pitch_trans, yaw_trans])
+    path.append([dx_trans, dy_trans])
+
+    if len(data) == samples:
+        print("converting data to csv")
+        data = np.array(data)
+        data = np.reshape(data, [samples, features])
+        path = np.array(path)
+        path = np.reshape(path, [samples, 2])
+
+        # f=open("../data/lilbot_data.csv",'a')
+        # np.savetxt(f, data, delimiter
+
+        plt.scatter(path[:, 0], path[:, 1], color='blue')
+        plt.xlabel('x')
+        plt.ylabel('y')
+        plt.ylim(-0.1,0.6)
+        plt.title('Healthy Path Data')
+        plt.show()
 
         sys.exit(1)
 

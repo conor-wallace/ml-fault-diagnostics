@@ -14,7 +14,7 @@ class GA():
         self.bicycle = bicycle
         self.population_size = population
         self.population = np.empty((self.population_size), dtype=object)
-        self.mutation_rate = 0.75
+        self.mutation_rate = 0.9
         self.crossover_point = 3
         self.chromosome_size = 6
         self.number_parents = int(math.sqrt(population))
@@ -156,17 +156,17 @@ class GA():
             mutate = np.random.uniform(0,1)
             if mutate < self.mutation_rate:
                 if np.random.uniform(0,1) < 0.5:
-                    self.population[i].k[0] = np.random.uniform(low=0, high=1000)
+                    self.population[i].k[0] = np.random.uniform(low=0, high=2)
                 if np.random.uniform(0,1) < 0.5:
-                    self.population[i].k[1] = np.random.uniform(low=0, high=1)
+                    self.population[i].k[1] = np.random.uniform(low=0, high=0.1)
                 if np.random.uniform(0,1) < 0.5:
-                    self.population[i].k[2] = np.random.uniform(low=0, high=1000)
+                    self.population[i].k[2] = np.random.uniform(low=0, high=0.1)
                 if np.random.uniform(0,1) < 0.5:
-                    self.population[i].k[3] = np.random.uniform(low=0, high=1000)
+                    self.population[i].k[3] = np.random.uniform(low=0, high=10)
                 if np.random.uniform(0,1) < 0.5:
-                    self.population[i].k[4] = np.random.uniform(low=0, high=1)
+                    self.population[i].k[4] = np.random.uniform(low=0, high=0.1)
                 if np.random.uniform(0,1) < 0.5:
-                    self.population[i].k[5] = np.random.uniform(low=0, high=1000)
+                    self.population[i].k[5] = np.random.uniform(low=0, high=0.1)
 
 
     def quickSort(self, x, start, end):

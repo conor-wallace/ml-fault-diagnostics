@@ -19,12 +19,25 @@ if __name__ == '__main__':
     msg = Int16MultiArray()
     rate = rospy.Rate(10.0)
     xv1 = xv2 = xv = wv = 0
+    count = 0
+    samples = 45
     while not rospy.is_shutdown():
-        xv1 = 175
-        xv2 = 175
-        wv = 250
 
-        msg.data = [int(-xv1),int(-xv2),0,int(-wv)]
-        lilbotPub.publish(msg)
+        if count != samples:
+            xv1 = 150
+            xv2 = 150
+            wv = 0
 
+            msg.data = [int(-xv1),int(-xv2),0,int(-wv)]
+            lilbotPub.publish(msg)
+        else:
+            xv1 = 0
+            xv2 = 0
+            wv = 0
+
+            msg.data = [int(-xv1),int(-xv2),0,int(-wv)]
+            lilbotPub.publish(msg)
+            sys.exit(1)
+
+        count += 1
         rate.sleep()
