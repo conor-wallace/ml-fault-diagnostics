@@ -9,7 +9,7 @@ class Bicycle():
         self.x = 0
         self.y = 0
         self.theta = 0
-        self.path = np.dot(0.05, path)
+        self.path = path#np.dot(0.05, path)
         self.desired_x = 0
         self.desired_y = 0
         self.desired_theta = 0
@@ -24,6 +24,37 @@ class Bicycle():
         self.prev_noise = 0.0
 
     def createPath(self):
+        C = np.zeros((40, 40))
+        wall1 = [[20,30],[21,30],[22,30],[23,30],[24,30],[25,30],[26,30],[27,30],[28,30],[29,30],[30,30]]
+        wall1 = np.reshape(wall1, (11, 2))
+        wall2 = np.flip(wall1, 1)
+
+        wall1_count = 0
+        wall2_count = 0
+        # path_count = len(path) - 1
+        #print(path[0])
+
+        for i in range(C.shape[0]):
+            for j in range(C.shape[1]):
+                if wall1_count <= 10:
+                    if i == wall1[wall1_count, 0] and j == wall1[wall1_count, 1]:
+                        C[i, j] = 1
+                        wall1_count += 1
+                if wall2_count <= 10:
+                    if i == wall2[wall2_count, 0] and j == wall2[wall2_count, 1]:
+                        C[i, j] = 1
+                        wall2_count += 1
+                coordinate = [i, j]
+                # if coordinate in path:
+                #     print(coordinate)
+                #     C[i, j] = 10
+                #     path_count -= 1
+
+        plt.imshow(C, cmap='Greys')
+        plt.gca().invert_yaxis()
+        plt.ylabel("y")
+        plt.xlabel("x")
+        plt.title("A* Optimal Path")
         x = self.path
         x = np.flip(x,0)
         print(x)
@@ -59,10 +90,12 @@ class Bicycle():
         theta_dot = ((v/self.L)*(math.tan(gamma)))
         x_dot = v * math.cos(self.theta)
         y_dot = v * math.sin(self.theta)
-        a = -0.494
-        b = -0.487
-        c = 0.488
+        a = -0.016 #19.995 #-0.494
+        b = 1.0 #0.015 #-0.487
+        c = 0.058 #-20.0 #0.488
 
+        self.x = np.clip(self.x, -1e5, 1e5)
+        self.x = np.float128(self.x)
         noise = a * np.exp(b * self.x) + c
         #derivatives
         self.theta = self.theta + np.clip(theta_dot, -1*math.radians(self.max_rad), math.radians(self.max_rad))
@@ -71,11 +104,10 @@ class Bicycle():
         self.prev_noise = noise
 
     def driveAlongPath(self, index, pid, return_dict, plot):
-        # print(pid.k)
         self.pid.k = pid.k
         i = len(self.path) - 2
-        self.x = 0#path[i+1, 0]
-        self.y = 0#path[i+1, 1]
+        self.x = 0
+        self.y = 0
         self.theta = math.radians(45)
         astar_path = []
         x_error = []
@@ -91,17 +123,19 @@ class Bicycle():
             delta_y = self.desired_y - self.y
             j = self.iter
             while j > 0:
-                delta_x = self.desired_x - self.x
-                delta_y = self.desired_y - self.y
+                delta_x = np.clip(self.desired_x - self.x, -1e50, 1e50)
+                delta_y = np.clip(self.desired_y - self.y, -1e50, 1e50)
                 self.desired_theta = math.atan2(delta_y, delta_x)
-                # print("current theta: %s" % self.desired_theta)
-                # print("current heading: %s" % self.theta)
-                delta_theta = self.desired_theta - self.theta
 
-                distance = np.clip(math.sqrt(delta_x**2 + delta_y**2), -1e50, 1e50)
-                # print("theta error: %s" % delta_theta)
-                # print("current [x, y]: [%s, %s]" % (self.x, self.y))
-                # print("distance error: %s" % distance)
+                delta_theta = self.desired_theta - self.theta
+                delta_x2 = delta_x**2
+                delta_y2 = delta_y**2
+                if math.isinf(delta_x2):
+                    delta_x2 = 1e25
+                if math.isinf(delta_y2):
+                    delta_y2 = 1e25
+                distance = math.sqrt(delta_x2 + delta_y2)
+
                 x_error.append([delta_x])
                 y_error.append([delta_y])
                 t_error.append([delta_theta])
@@ -116,7 +150,7 @@ class Bicycle():
 
         if plot:
             self.astar_path = np.asarray(self.astar_path)
-            plt.plot(self.astar_path[:, 0], self.astar_path[:, 1], color='red')
+            plt.plot(self.astar_path[:, 0], self.astar_path[:, 1], color='red', linewidth=2)
             plt.plot(self.desired_path[:,0], self.desired_path[:,1], color='blue')
             plt.xlabel('x')
             plt.ylabel('y')

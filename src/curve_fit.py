@@ -10,59 +10,61 @@ def func(x, a, b, c):
 data = pd.read_csv("~/catkin_ws/src/network_faults/data/lilbot_data.csv")
 dataset = data[['x', 'y']]
 dataset = dataset.to_numpy()
-healthy_data = dataset[0:2250]
-left_data = dataset[2250:4500]
-right_data = dataset[4500:-1]
+healthy_data = dataset[0:1800]
+left_data = dataset[1800:3600]
+right_data = dataset[3600:-1]
 
+f, (ax1, ax2, ax3) = plt.subplots(1, 3)
+color = 'black'
 xdata = healthy_data[:,0]
 y = healthy_data[:,1]
 ydata = y
-plt.scatter(xdata, ydata, c='blue', marker='.', label='data')
+ax1.scatter(xdata, ydata, color='#91bfdb', marker='.')
 
 popt, pcov = curve_fit(func, xdata, ydata, bounds=([-20, -1.0, -20], [20, 1.0, 20]))
 popt
 
-plt.scatter(xdata, func(xdata, *popt), c='red', marker='p',
-         label='constrained fit: a=%5.3f, b=%5.3f, c=%5.3f' % tuple(popt))
+ax1.scatter(xdata, func(xdata, *popt), color=color, marker='p')
 
-plt.xlabel('x')
-plt.ylabel('y')
-plt.title('Healthy Data')
-plt.legend()
-plt.show()
+ax1.set_ylabel('y')
+ax1.set_xlabel('x')
+ax1.set_xlim(-0.1,3.1)
+ax1.set_ylim(-0.6,0.95)
+ax1.legend()
+ax1.set_title('Healthy Trajectory')
 
 xdata = left_data[:,0]
 y = left_data[:,1]
 ydata = y
-plt.scatter(xdata, ydata, c='blue', marker='.', label='data')
+ax2.scatter(xdata, ydata, color='#FFC39D', marker='.')
 
 popt, pcov = curve_fit(func, xdata, ydata, bounds=([-20, -1.0, -20], [20, 1.0, 20]))
 popt
 
-plt.scatter(xdata, func(xdata, *popt), c='red', marker='p',
-         label='constrained fit: a=%5.3f, b=%5.3f, c=%5.3f' % tuple(popt))
+ax2.scatter(xdata, func(xdata, *popt), color=color, marker='p')
 
-plt.xlabel('x')
-plt.ylabel('y')
-plt.title('Left Fault Data')
-plt.legend()
-plt.show()
+ax2.set_xlabel('x')
+ax2.set_xlim(-0.1,3.1)
+ax2.set_ylim(-0.6,0.95)
+ax2.legend()
+ax2.set_title('Left Fault Trajectory')
 
 
 
 xdata = right_data[:,0]
 y = right_data[:,1]
 ydata = y
-plt.scatter(xdata, ydata, c='blue', marker='.', label='data')
+ax3.scatter(xdata, ydata, color='#99d594', marker='.')
 
-popt, pcov = curve_fit(func, xdata, ydata, bounds=([-20, -1.0, -20], [20, 1.0, 20]))
+popt, pcov = curve_fit(func, xdata, ydata, method='trf', bounds=([-20, -1.0, -20], [20, 1.0, 20]))
 popt
 
-plt.scatter(xdata, func(xdata, *popt), c='red', marker='p',
-         label='constrained fit: a=%5.3f, b=%5.3f, c=%5.3f' % tuple(popt))
+ax3.scatter(xdata, func(xdata, *popt), color=color, marker='p')
 
-plt.xlabel('x')
-plt.ylabel('y')
-plt.title('Right Fault Data')
-plt.legend()
+ax3.set_xlabel('x')
+ax3.set_xlim(-0.1,3.1)
+ax3.set_ylim(-0.6,0.95)
+ax3.legend()
+ax3.set_title('Right Fault Trajectory')
+
 plt.show()

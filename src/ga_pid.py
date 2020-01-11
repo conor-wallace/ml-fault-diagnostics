@@ -24,6 +24,7 @@ class GA():
         self.fittest.fitness = 1000000
         self.fit_norm = 0.0
         self.last_norm = 100000.0
+        self.fit_plot = []
 
     def setup(self):
         for i in range(self.population_size):
@@ -54,6 +55,14 @@ class GA():
 
         print("done evolving")
         return_dict = [0]
+        self.fit_plot = np.array(self.fit_plot)
+        t = np.arange(self.fit_plot.shape[0])
+        plt.plot(t, self.fit_plot, color='blue', linewidth=2)
+        plt.xlabel('generations')
+        plt.ylabel('loss')
+        plt.title('Genetic Algorithm Convergence')
+        plt.show()
+        print(self.fittest.k)
         self.bicycle.driveAlongPath(0, self.fittest, return_dict, 1)
 
         return self.fittest.k
@@ -103,19 +112,20 @@ class GA():
             print(parent.fitness)
 
         self.fittest = parents[0]
+        self.fit_plot.append(self.fittest.fitness)
         fitness = np.array(fitness)
         self.fit_norm = np.linalg.norm(fitness)
         print("fitness norm")
         print(self.fit_norm)
         dt = self.fit_norm
         if dt < 1000 and dt >= 500:
-            self.mutation_rate = 0.5
+            self.mutation_rate = 0.75
         elif dt < 500 and dt >= 250:
-            self.mutation_rate = 0.35
+            self.mutation_rate = 0.5
         elif dt < 250 and dt >= 100:
-            self.mutation_rate = 0.25
+            self.mutation_rate = 0.35
         elif dt < 100:
-            self.mutation_rate = 0.15
+            self.mutation_rate = 0.25
 
 
 
