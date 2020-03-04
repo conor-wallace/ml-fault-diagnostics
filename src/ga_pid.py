@@ -63,7 +63,7 @@ class GA():
         plt.title('Genetic Algorithm Convergence')
         plt.show()
         print(self.fittest.k)
-        self.bicycle.driveAlongPath(0, self.fittest, return_dict, 1)
+        self.bicycle.driveAlongPath(0, self.fittest, return_dict, 1, 0)
 
         return self.fittest.k
 
@@ -86,7 +86,7 @@ class GA():
         return_dict = manager.dict()
         processes = []
         for i in range(self.population.shape[0]):
-            p = multiprocessing.Process(target=self.bicycle.driveAlongPath, args=[i, self.population[i], return_dict, 0])
+            p = multiprocessing.Process(target=self.bicycle.driveAlongPath, args=[i, self.population[i], return_dict, 0, 0])
             p.start()
             processes.append(p)
 

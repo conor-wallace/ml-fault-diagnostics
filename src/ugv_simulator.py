@@ -16,129 +16,70 @@ import matplotlib.pyplot as plt
 from pid import PID
 from bicycle import Bicycle
 
-stop = 0
-max_rad = 38.0
-max_vel = 1.0
-v_scale = max_vel / 255.0
-g_scale = max_rad / 255.0
-v = 150 * v_scale
-gamma = 0.0
-time_series = []
-test_path = []
-first_time = 0
-stamp_time = 0
-last_time = 0
-first_read = 0
-x = 0
-stop = 0
-count = 0
-L = 0.19
-prev_noise = 0.0
 
-test_theta = 0
-test_x = 0.0
-test_y = 0.0
+def driveUGV(model):
+    model.pid.k = [0.01, 0.0, 0.0, 1.0, 0.0, 0.0]
 
-# def getPIDCallback(data):
-#     global v, gamma, max_vel_w, max_vel_x, first_read
-#     print(data.lin_vel, data.ang_vel)
-#     if data.lin_vel == 1000:
-#         stop = 1
-#     if (first_read == 0):
-#         first_read = 1
-#         v = data.lin_vel
-#         gamma = data.ang_vel
-#     else:
-#         v = data.lin_vel
-#         gamma = data.ang_vel
+    rospy.init_node('ugv_simulator')
+    # rospy.Subscriber("/pid", Velocity, getPIDCallback)
+    pose_pub = rospy.Publisher("/model_odom", PoseStamped, queue_size=1, tcp_nodelay=True)
 
-rospy.init_node('ugv_simulator')
-# rospy.Subscriber("/pid", Velocity, getPIDCallback)
-pose_pub = rospy.Publisher("lilbot_SIMULATION/pose", PoseStamped, queue_size=1, tcp_nodelay=True)
+    tfBuffer = tf2_ros.Buffer()
+    listener = tf2_ros.TransformListener(tfBuffer)
 
-tfBuffer = tf2_ros.Buffer()
-listener = tf2_ros.TransformListener(tfBuffer)
+    rate = rospy.Rate(10.0)
 
-rate = rospy.Rate(10.0)
-while not rospy.is_shutdown():
-    current_time = rospy.get_time()
-    if first_read == 0:
-        noise_level = 0.0
-        fault_level = 0.0
-        x = rospy.Time.now().to_sec()*0.5
-        delta_x = rospy.Time.now().to_sec()*0.5 - x
-        dx_target = 0.0
-        dy_target = 0.0
-        dx_trans = 0
-        dy_trans = 0
-        yaw_trans = 0
-    else:
-        delta_x = rospy.Time.now().to_sec()*0.5 - x
-        noise_level = np.random.normal(0.01, 0.001)
-        print("time: %s" % delta_x)
-        fault_level = 0.0*(np.exp(0.005*count)-1)
-        print("fault level: %s" % fault_level)
-        count += 1
-        dx_target = -1 * (math.sin(delta_x+np.pi))
-        dy_target = -1 * (math.cos(delta_x+np.pi)+1)
-        dx_trans = test_x
-        dy_trans = test_y
-        yaw_trans = test_theta
-    # perform the broadcasting
-    # print("noise: %s" % noise_level)
-    br = tf2_ros.TransformBroadcaster()
-    t = geometry_msgs.msg.TransformStamped()
-    t.header.stamp = rospy.Time.now()
-    t.header.frame_id = "odom"#"base_link"
-    t.child_frame_id = "lilbot_SIMULATION/Base Frame"
-    t.transform.translation.x = test_x
-    t.transform.translation.y = test_y
-    t.transform.translation.z = 0.0
-    q = tf_conversions.transformations.quaternion_from_euler(0, 0, test_theta)
-    t.transform.rotation.x = q[0]
-    t.transform.rotation.y = q[1]
-    t.transform.rotation.z = q[2]
-    t.transform.rotation.w = q[3]
-    rospy.Time.now()
-    br.sendTransform(t)
+    test_path = []
+    last_time = rospy.Time.now().to_sec()
 
-    test_path.append([dx_trans, dy_trans])
-    delta_x = dx_target - test_x
-    delta_y = dy_target - test_y
+    while not rospy.is_shutdown():
+        br = tf2_ros.TransformBroadcaster()
+        t = geometry_msgs.msg.TransformStamped()
+        t.header.stamp = rospy.Time.now()
+        t.header.frame_id = "/model_base_link"#"base_link"
+        t.child_frame_id = "/model_base_frame"
+        t.transform.translation.x = model.x
+        t.transform.translation.y = model.y
+        t.transform.translation.z = 0.0
+        q = tf_conversions.transformations.quaternion_from_euler(0, 0, model.theta)
+        t.transform.rotation.x = q[0]
+        t.transform.rotation.y = q[1]
+        t.transform.rotation.z = q[2]
+        t.transform.rotation.w = q[3]
+        rospy.Time.now()
+        br.sendTransform(t)
 
-    desired_heading = (math.degrees(math.atan2((delta_y), (delta_x)) % (2 * math.pi)))
-    current_heading = (math.degrees(test_theta % (2 * math.pi)))
+        test_path.append([model.x, model.y])
+        current_time = rospy.Time.now().to_sec()
+        dt = current_time - last_time
+        print(dt)
+        last_time = current_time
 
-    if desired_heading >= 270.0 and desired_heading <= 360.0:
-        if current_heading >= 0.0 and current_heading <= 90.0:
-            current_heading += 360
-    delta_theta = desired_heading - current_heading
+        # PID stuff goes here
+        model.calculateError(model.path)
+        model.pid.calculatePID(model.distance_error, model.heading_error, dt)
+        velocity = model.pid.velocity
+        steering = model.pid.steering
 
-    curr_time = rospy.Time.now().to_sec()
-    if not first_time:
-        first_time = curr_time
-    time_series.append((curr_time - first_time)*1000)
-    delta_t = (curr_time - last_time)
-    delta_t = (delta_t if delta_t != 0 else 0.1)
-    last_time = curr_time
+        # Fault classiification: 0 = healthy noise, 1 = left noise, 2 = right noise, 3 = no noise
+        fault = 3
 
-    #dynamics
-    theta_dot = ((v/L)*(math.tan(gamma)))
-    x_dot = v * math.cos(test_theta)
-    y_dot = v * math.sin(test_theta)
+        # Actuation
+        model.dynamics(velocity, steering, 3, dt)
+        distance = np.linalg.norm(np.array([model.x, model.y] - model.path))
+        print(np.array([model.x, model.y]))
+        print(model.path)
 
-    a = -0.494
-    b = -0.487
-    c = 0.488
+        if (distance <= 0.5):
+            print("stop")
+            return test_path
+        rate.sleep()
 
-    noise = a * np.exp(b * test_x) + c
-    delta_t = 0.1 #10 ms
-    test_theta = test_theta + np.clip(theta_dot, -1*math.radians(max_rad), math.radians(max_rad))*delta_t
-    test_x = test_x + np.clip(x_dot, -1*max_vel, max_vel)*delta_t
-    test_y = test_y + np.clip(y_dot, -1*max_vel, max_vel)*delta_t+(noise-prev_noise)
-    prev_noise = noise
+if __name__ == '__main__':
+    target = np.array([10.0, 10.0])
+    bicycle = Bicycle(target)
+    achieved_path = driveUGV(bicycle)
 
-    if len(test_path) == 45:
-        print("stop")
-        sys.exit(1)
-    rate.sleep()
+    achieved_path = np.array(achieved_path)
+    plt.plot(achieved_path[:, 0], achieved_path[:, 1])
+    plt.show()

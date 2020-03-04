@@ -7,6 +7,7 @@ from network_faults.msg import Coordinate, Path, ROSpid
 from pid import PID
 from bicycle import Bicycle
 from ga_pid import GA
+import yaml
 
 first_read = 1
 path_msg = None
@@ -51,7 +52,14 @@ while not rospy.is_shutdown():
         # return_dict = [0]
         # ga.bicycle.driveAlongPath(0, ga.fittest, return_dict, 1)
         optimal_k = ga.evolve()
-        pid_msg.gain = list(optimal_k)
+        optimal_k = list(optimal_k)
+        pid_msg.gain = optimal_k
+        print(optimal_k)
+
+        dict_file = dict(Matrix=np.array(optimal_k))
+
+        with open(r'/home/conor/catkin_ws/src/network_faults/data/pid_file.yaml', 'w') as file:
+            documents = yaml.dump(dict_file, file, default_flow_style=False)
 
         target = 1
     pid_pub.publish(pid_msg)

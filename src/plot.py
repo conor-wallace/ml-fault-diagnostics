@@ -4,24 +4,27 @@ import math
 import sys
 from matplotlib import pyplot as plt
 
+#replace with the path on your pc
 data = pd.read_csv("~/catkin_ws/src/network_faults/data/lilbot_data.csv")
 dataset = data[['iteration','x', 'y']]
 dataset = dataset.to_numpy()
 healthy_data = dataset[0:1800]
 left_data = dataset[1800:3600]
-right_data = dataset[3600:-1]
+right_data = dataset[3599:-1]
 
-print(dataset.shape)
+plt.scatter(healthy_data[:, 1], healthy_data[:, 2], color='green', label='Healthy')
+plt.scatter(left_data[:, 1], left_data[:, 2], color='red', label='Left Suspension Fault')
+plt.scatter(right_data[:, 1], right_data[:, 2], color='blue', label='Right Suspension Fault')
+plt.title("Fault Trajectories")
+plt.xlabel("x")
+plt.ylabel("y")
+plt.legend()
+plt.show()
 
-curr_index = 3600
-sequences = 450
+print(right_data.shape)
 
-for i in range(4):
-    data = dataset[curr_index:curr_index+sequences]
-    plt.scatter(data[:, 1], data[:, 2])
-    plt.show()
-    curr_index += sequences
-
+curr_index = 0
+sequences = 447
 
 # f, (ax1, ax2, ax3) = plt.subplots(1, 3)
 # ax1.scatter(healthy_data[:, 1], healthy_data[:, 2], color='#91bfdb', label='no fault')
