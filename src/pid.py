@@ -11,7 +11,7 @@ class PID():
         self.Integral_d = 0
         self.Integral_theta = 0
         self.d_max = 1
-        self.theta_max = math.pi
+        self.theta_max = math.radians(39)
         self.fitness = 0
 
     def calculatePID(self, distance, heading, dt):
@@ -22,6 +22,9 @@ class PID():
 
         self.velocity = self.k[0]*distance + self.k[1]*self.Integral_d + self.k[2]*(distance - self.last_d)*dt
         self.steering = self.k[3]*heading + self.k[4]*self.Integral_theta + self.k[5]*(heading - self.last_theta)*dt
+
+        self.velocity = np.clip(self.velocity, -self.d_max, self.d_max)
+        self.steering = np.clip(self.steering, -self.theta_max, self.theta_max)
 
         self.last_d = distance
         self.last_theta = heading

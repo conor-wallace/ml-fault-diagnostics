@@ -47,7 +47,8 @@ while not rospy.is_shutdown():
     if stop and not target:
         bicycle = Bicycle(path)
         bicycle.createPath()
-        ga = GA(100, 100, bicycle)
+        fault = 2
+        ga = GA(100, 50, bicycle, fault)
         ga.setup()
         # return_dict = [0]
         # ga.bicycle.driveAlongPath(0, ga.fittest, return_dict, 1)

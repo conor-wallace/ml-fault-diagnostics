@@ -24,7 +24,8 @@ class Bicycle():
         self.desired_path = np.zeros(((self.path.shape[0])*self.iter,2))
         self.astar_path = []
         self.prev_noise = 0.0
-        self.noise_functions = np.array([[2.00000000e+01, 6.62201978e-03, -1.99941291e+01], [-5.10091508, -0.06503655, 5.08946158],
+        self.noise_functions = np.array([[2.00000000e+01, 6.62201978e-03, -1.99941291e+01],
+                                         [-5.10091508, -0.06503655, 5.08946158],
                                          [-0.01754703, 1.0, 0.06324038], [0.0, 0.0, 0.0]])
 
     def createPath(self):
@@ -89,34 +90,70 @@ class Bicycle():
         plt.plot(self.desired_path[:,0], self.desired_path[:,1],color='blue')
         plt.show()
 
-    def dynamics(self, v, gamma, fault, dt):
-        #dynamics
-        theta_dot = ((v/self.L)*(math.tan(gamma)))*dt
-        x_dot = v * math.cos(self.theta)*dt
-        y_dot = v * math.sin(self.theta)*dt
+    def computeNoiseFunction(self, fault):
+        fault_noise = self.noise_functions[fault, 0] * np.exp(self.noise_functions[fault, 1] * self.x) + self.noise_functions[fault, 2]
+        # white_noise = np.random.normal(0, 0.4)
 
+        return fault_noise
+
+    def dynamics(self, v, gamma, fault, dt):
         self.x = np.clip(self.x, -1e5, 1e5)
         self.x = np.float128(self.x)
-        noise = self.noise_functions[fault, 0] * np.exp(self.noise_functions[fault, 1] * self.x) + self.noise_functions[fault, 2]
+        #dynamics
+        noise = self.computeNoiseFunction(fault)
+        yaw_dot = ((v/self.L)*(math.tan(gamma)))*dt
+        x_dot = (v * math.cos(self.theta) - math.sin(self.theta)*(noise-self.prev_noise))*dt
+        y_dot = (v * math.sin(self.theta) + math.cos(self.theta)*(noise-self.prev_noise))*dt
+
         #derivatives
-        self.theta = self.theta + np.clip(theta_dot, -1*math.radians(self.max_rad), math.radians(self.max_rad))
-        self.x = self.x + np.clip(x_dot, -1*self.max_vel, self.max_vel)
-        self.y = self.y + np.clip(y_dot, -1*self.max_vel, self.max_vel)+(noise-self.prev_noise)
+        self.theta = self.theta + yaw_dot
+        self.x = self.x + x_dot
+        self.y = self.y + y_dot
+
         self.prev_noise = noise
+
+    def angdiff(self, a, b):
+        diff = a - b
+        if diff < 0.0:
+            diff = (diff % (-2*math.pi))
+            print(diff)
+            if diff < (-math.pi):
+                diff = diff + 2*math.pi
+        else:
+            diff = (diff % 2*math.pi)
+            if diff > math.pi:
+                diff = diff - 2*math.pi
+
+        return diff
 
     def calculateError(self, target):
         delta_x = np.clip(target[0] - self.x, -1e50, 1e50)
         delta_y = np.clip(target[1] - self.y, -1e50, 1e50)
         desired_heading = math.atan2(delta_y, delta_x)
+        self.heading_error = self.angdiff(desired_heading, self.theta)
 
-        self.heading_error = desired_heading - self.theta
         delta_x2 = delta_x**2
         delta_y2 = delta_y**2
         if math.isinf(delta_x2):
             delta_x2 = 1e25
         if math.isinf(delta_y2):
             delta_y2 = 1e25
+
         self.distance_error = math.sqrt(delta_x2 + delta_y2)
+
+    # def calculateError(self, target):
+    #     delta_x = np.clip(target[0] - self.x, -1e50, 1e50)
+    #     delta_y = np.clip(target[1] - self.y, -1e50, 1e50)
+    #     desired_heading = math.atan2(delta_y, delta_x)
+    #
+    #     self.heading_error = desired_heading - self.theta
+    #     delta_x2 = delta_x**2
+    #     delta_y2 = delta_y**2
+    #     if math.isinf(delta_x2):
+    #         delta_x2 = 1e25
+    #     if math.isinf(delta_y2):
+    #         delta_y2 = 1e25
+    #     self.distance_error = math.sqrt(delta_x2 + delta_y2)
 
     def driveAlongPath(self, index, pid, return_dict, plot, fault):
         self.pid.k = pid.k
@@ -156,8 +193,8 @@ class Bicycle():
                 t_error.append([delta_theta])
                 d_error.append([distance])
                 self.astar_path.append([self.x, self.y])
-                self.pid.calculatePID(distance, delta_theta)
-                self.dynamics(self.pid.v, self.pid.g, fault)
+                self.pid.calculatePID(distance, delta_theta, 0.1)
+                self.dynamics(self.pid.velocity, self.pid.steering, fault, 0.1)
                 j = j - 1
             i = i - 1
         pid.fitness = self.objective()
@@ -165,6 +202,7 @@ class Bicycle():
 
         if plot:
             self.astar_path = np.asarray(self.astar_path)
+            plt.figure(figsize = (7,7))
             plt.plot(self.astar_path[:, 0], self.astar_path[:, 1], color='red', linewidth=2)
             plt.plot(self.desired_path[:,0], self.desired_path[:,1], color='blue')
             plt.xlabel('x')
@@ -172,35 +210,35 @@ class Bicycle():
             plt.title('UGV Path')
             plt.show()
 
-            time = np.arange(len(t_error))
-            x_error = np.array(x_error)
-            plt.plot(time[:], x_error[:, 0])
-            plt.xlabel('t')
-            plt.ylabel('x')
-            plt.title('UGV X Trajectory')
-            plt.show()
-
-            y_error = np.array(y_error)
-            plt.plot(time[:], y_error[:, 0])
-            plt.xlabel('t')
-            plt.ylabel('y')
-            plt.title('UGV Y Trajectory')
-            plt.show()
-
-            time = np.arange(len(t_error))
-            t_error = np.asarray(t_error)
-            plt.plot(time[:], t_error[:, 0])
-            plt.xlabel('t')
-            plt.ylabel('theta')
-            plt.title('UGV Theta Error')
-            plt.show()
-
-            d_error = np.asarray(d_error)
-            plt.plot(time[:], d_error[:, 0])
-            plt.xlabel('t')
-            plt.ylabel('yl2 norm')
-            plt.title('UGV Distance Error')
-            plt.show()
+            # time = np.arange(len(t_error))
+            # x_error = np.array(x_error)
+            # plt.plot(time[:], x_error[:, 0])
+            # plt.xlabel('t')
+            # plt.ylabel('x')
+            # plt.title('UGV X Trajectory')
+            # plt.show()
+            #
+            # y_error = np.array(y_error)
+            # plt.plot(time[:], y_error[:, 0])
+            # plt.xlabel('t')
+            # plt.ylabel('y')
+            # plt.title('UGV Y Trajectory')
+            # plt.show()
+            #
+            # time = np.arange(len(t_error))
+            # t_error = np.asarray(t_error)
+            # plt.plot(time[:], t_error[:, 0])
+            # plt.xlabel('t')
+            # plt.ylabel('theta')
+            # plt.title('UGV Theta Error')
+            # plt.show()
+            #
+            # d_error = np.asarray(d_error)
+            # plt.plot(time[:], d_error[:, 0])
+            # plt.xlabel('t')
+            # plt.ylabel('yl2 norm')
+            # plt.title('UGV Distance Error')
+            # plt.show()
 
             path_data = x_error
             path_data = np.concatenate((path_data, y_error), axis=1)

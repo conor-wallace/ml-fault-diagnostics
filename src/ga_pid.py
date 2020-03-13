@@ -10,11 +10,11 @@ import timeit
 # TODO: develope a way to adapt mutation rate as the algorithm converges
 
 class GA():
-    def __init__(self, population, generations, bicycle):
+    def __init__(self, population, generations, bicycle, fault):
         self.bicycle = bicycle
         self.population_size = population
         self.population = np.empty((self.population_size), dtype=object)
-        self.mutation_rate = 0.9
+        self.mutation_rate = 0.1
         self.crossover_point = 3
         self.chromosome_size = 6
         self.number_parents = int(math.sqrt(population))
@@ -25,6 +25,7 @@ class GA():
         self.fit_norm = 0.0
         self.last_norm = 100000.0
         self.fit_plot = []
+        self.fault = fault
 
     def setup(self):
         for i in range(self.population_size):
@@ -57,7 +58,9 @@ class GA():
         return_dict = [0]
         self.fit_plot = np.array(self.fit_plot)
         t = np.arange(self.fit_plot.shape[0])
+        plt.figure(figsize = (7,7))
         plt.plot(t, self.fit_plot, color='blue', linewidth=2)
+        plt.xlim((0,25))
         plt.xlabel('generations')
         plt.ylabel('loss')
         plt.title('Genetic Algorithm Convergence')
@@ -86,7 +89,7 @@ class GA():
         return_dict = manager.dict()
         processes = []
         for i in range(self.population.shape[0]):
-            p = multiprocessing.Process(target=self.bicycle.driveAlongPath, args=[i, self.population[i], return_dict, 0, 0])
+            p = multiprocessing.Process(target=self.bicycle.driveAlongPath, args=[i, self.population[i], return_dict, 0, self.fault])
             p.start()
             processes.append(p)
 
@@ -102,6 +105,13 @@ class GA():
             self.population[i].fitness = return_dict[i]
 
     def selection(self):
+        print("\n")
+        print("unsorted parents")
+        parents = self.population[0:self.number_parents]
+        fitness = []
+        for parent in parents:
+            fitness.append(parent.fitness)
+            print(parent.fitness)
         self.quickSort(self.population, 0, self.population.shape[0]-1)
         print("\n")
         print("fittest parents")
@@ -119,13 +129,13 @@ class GA():
         print(self.fit_norm)
         dt = self.fit_norm
         if dt < 1000 and dt >= 500:
-            self.mutation_rate = 0.75
-        elif dt < 500 and dt >= 250:
-            self.mutation_rate = 0.5
-        elif dt < 250 and dt >= 100:
-            self.mutation_rate = 0.35
-        elif dt < 100:
             self.mutation_rate = 0.25
+        elif dt < 500 and dt >= 350:
+            self.mutation_rate = 0.35
+        elif dt < 350 and dt >= 200:
+            self.mutation_rate = 0.5
+        elif dt < 200:
+            self.mutation_rate = 0.75
 
 
 
@@ -165,18 +175,18 @@ class GA():
         for i in range(self.population.shape[0]):
             mutate = np.random.uniform(0,1)
             if mutate < self.mutation_rate:
-                if np.random.uniform(0,1) < 0.5:
-                    self.population[i].k[0] = np.random.uniform(low=0, high=2)
+                if np.random.uniform(0,1) < 0.9:
+                    self.population[i].k[0] = np.random.uniform(low=0, high=1.0)
                 if np.random.uniform(0,1) < 0.5:
                     self.population[i].k[1] = np.random.uniform(low=0, high=0.1)
                 if np.random.uniform(0,1) < 0.5:
-                    self.population[i].k[2] = np.random.uniform(low=0, high=0.1)
+                    self.population[i].k[2] = np.random.uniform(low=0, high=0.01)
+                if np.random.uniform(0,1) < 0.9:
+                    self.population[i].k[3] = np.random.uniform(low=0, high=1.0)
                 if np.random.uniform(0,1) < 0.5:
-                    self.population[i].k[3] = np.random.uniform(low=0, high=10)
+                    self.population[i].k[4] = np.random.uniform(low=0, high=0.01)
                 if np.random.uniform(0,1) < 0.5:
-                    self.population[i].k[4] = np.random.uniform(low=0, high=0.1)
-                if np.random.uniform(0,1) < 0.5:
-                    self.population[i].k[5] = np.random.uniform(low=0, high=0.1)
+                    self.population[i].k[5] = np.random.uniform(low=0, high=0.01)
 
 
     def quickSort(self, x, start, end):
