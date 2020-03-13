@@ -14,7 +14,7 @@ class GA():
         self.bicycle = bicycle
         self.population_size = population
         self.population = np.empty((self.population_size), dtype=object)
-        self.mutation_rate = 0.1
+        self.mutation_rate = 0.5
         self.crossover_point = 3
         self.chromosome_size = 6
         self.number_parents = int(math.sqrt(population))
@@ -26,16 +26,18 @@ class GA():
         self.last_norm = 100000.0
         self.fit_plot = []
         self.fault = fault
+        self.mu = np.array([10.0, 1.0, 0.1, 20.0, 1.0, 0.1])
+        self.sigma = np.array([10.0, 1.0, 0.1, 20.0, 1.0, 0.1])
 
     def setup(self):
         for i in range(self.population_size):
             k = np.empty((self.chromosome_size))
-            k[0] = np.random.uniform(low=0, high=2)
+            k[0] = np.random.uniform(low=0, high=1.0)
             k[1] = np.random.uniform(low=0, high=0.1)
-            k[2] = np.random.uniform(low=0, high=0.1)
-            k[3] = np.random.uniform(low=0, high=10)
+            k[2] = np.random.uniform(low=0, high=0.01)
+            k[3] = np.random.uniform(low=0, high=1.0)
             k[4] = np.random.uniform(low=0, high=0.1)
-            k[5] = np.random.uniform(low=0, high=0.1)
+            k[5] = np.random.uniform(low=0, high=0.01)
             pid = PID(k)
 
             self.population[i] = pid
@@ -48,6 +50,12 @@ class GA():
             self.fitness()
             print("select parents")
             parents = self.selection()
+            self.mu = self.fittest.k
+            self.sigma = self.sigma * 1.0
+            print("New mu")
+            print(self.mu)
+            print("New sigma")
+            print(self.sigma)
             print("crossover")
             self.crossover(parents)
             print("mutation")
@@ -66,7 +74,7 @@ class GA():
         plt.title('Genetic Algorithm Convergence')
         plt.show()
         print(self.fittest.k)
-        self.bicycle.driveAlongPath(0, self.fittest, return_dict, 1, 0)
+        self.bicycle.driveAlongPath(0, self.fittest, return_dict, 1, self.fault)
 
         return self.fittest.k
 
@@ -128,16 +136,15 @@ class GA():
         print("fitness norm")
         print(self.fit_norm)
         dt = self.fit_norm
-        if dt < 1000 and dt >= 500:
-            self.mutation_rate = 0.25
-        elif dt < 500 and dt >= 350:
-            self.mutation_rate = 0.35
-        elif dt < 350 and dt >= 200:
-            self.mutation_rate = 0.5
-        elif dt < 200:
-            self.mutation_rate = 0.75
 
-
+        # if dt < 1000 and dt >= 500:
+        #     self.mutation_rate = 0.75
+        # elif dt < 500 and dt >= 200:
+        #     self.mutation_rate = 0.5
+        # elif dt < 200 and dt >= 100:
+        #     self.mutation_rate = 0.35
+        # elif dt < 100:
+        #     self.mutation_rate = 0.25
 
         print("mutation rate: %s" % self.mutation_rate)
         self.last_norm = self.fit_norm
@@ -172,21 +179,21 @@ class GA():
 
     def mutation(self):
         print("build mutation")
-        for i in range(self.population.shape[0]):
+        for i in range(self.number_parents, self.population.shape[0]):
             mutate = np.random.uniform(0,1)
-            if mutate < self.mutation_rate:
-                if np.random.uniform(0,1) < 0.9:
-                    self.population[i].k[0] = np.random.uniform(low=0, high=1.0)
-                if np.random.uniform(0,1) < 0.5:
-                    self.population[i].k[1] = np.random.uniform(low=0, high=0.1)
-                if np.random.uniform(0,1) < 0.5:
-                    self.population[i].k[2] = np.random.uniform(low=0, high=0.01)
-                if np.random.uniform(0,1) < 0.9:
-                    self.population[i].k[3] = np.random.uniform(low=0, high=1.0)
-                if np.random.uniform(0,1) < 0.5:
-                    self.population[i].k[4] = np.random.uniform(low=0, high=0.01)
-                if np.random.uniform(0,1) < 0.5:
-                    self.population[i].k[5] = np.random.uniform(low=0, high=0.01)
+            # if mutate < self.mutation_rate:
+            if np.random.uniform(0,1) < self.mutation_rate:
+                self.population[i].k[0] = math.fabs(np.random.normal(self.mu[0], self.sigma[0]))
+            if np.random.uniform(0,1) < self.mutation_rate:
+                self.population[i].k[1] = math.fabs(np.random.normal(self.mu[1], self.sigma[1]))
+            if np.random.uniform(0,1) < self.mutation_rate:
+                self.population[i].k[2] = math.fabs(np.random.normal(self.mu[2], self.sigma[2]))
+            if np.random.uniform(0,1) < self.mutation_rate:
+                self.population[i].k[3] = math.fabs(np.random.normal(self.mu[3], self.sigma[3]))
+            if np.random.uniform(0,1) < self.mutation_rate:
+                self.population[i].k[4] = math.fabs(np.random.normal(self.mu[4], self.sigma[4]))
+            if np.random.uniform(0,1) < self.mutation_rate:
+                self.population[i].k[5] = math.fabs(np.random.normal(self.mu[5], self.sigma[5]))
 
 
     def quickSort(self, x, start, end):

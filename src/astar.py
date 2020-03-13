@@ -20,18 +20,10 @@ class Node():
         y = self.position[1]
         if x < cols - 1:
             self.neighbors.append(grid[x + 1, y])
-        if x > 0:
-            self.neighbors.append(grid[x - 1, y])
         if y < rows - 1:
             self.neighbors.append(grid[x, y + 1])
         if y > 0:
             self.neighbors.append(grid[x, y - 1])
-        if (x > 0) and (y > 0):
-            self.neighbors.append(grid[x - 1, y - 1])
-        if (x > cols -1) and (y > 0):
-            self.neighbors.append(grid[x + 1, y - 1])
-        if (x > 0) and (y < rows - 1):
-            self.neighbors.append(grid[x - 1, y + 1])
         if (x < cols - 1) and (y < rows - 1):
             self.neighbors.append(grid[x + 1, y + 1])
 

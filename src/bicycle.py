@@ -15,7 +15,7 @@ class Bicycle():
         self.desired_theta = 0
         self.heading_error = 0.0
         self.distance_error = 100000.0
-        self.k = [0.1, 0.0, 0.0, 1, 0.0, 0.0]
+        self.k = [0.3019153134631294, 0.0019364562790725396, 0.14442752451635107, 1.0706913654117989, 0.09469238869269857, 0.03872382526017986]
         self.max_rad = 38.0
         self.max_vel = 1.0
         self.L = 0.19
@@ -23,10 +23,11 @@ class Bicycle():
         self.pid = PID(self.k)
         self.desired_path = np.zeros(((self.path.shape[0])*self.iter,2))
         self.astar_path = []
+        self.path_data = []
         self.prev_noise = 0.0
-        self.noise_functions = np.array([[2.00000000e+01, 6.62201978e-03, -1.99941291e+01],
-                                         [-5.10091508, -0.06503655, 5.08946158],
-                                         [-0.01754703, 1.0, 0.06324038], [0.0, 0.0, 0.0]])
+        self.noise_functions = np.array([[0.79159172, 1.0, -2.67407148],
+                                         [2.11253316, 1.0, -2.90662845],
+                                         [-20.0, 1.0, -7.60034135], [0.0, 0.0, 0.0]])
 
     def createPath(self):
         C = np.zeros((40, 40))
@@ -86,37 +87,61 @@ class Bicycle():
             print(data.shape)
             print(self.desired_path.shape)
             self.desired_path[i*self.iter:i*self.iter+self.iter,:] = data
+        scale = float(35.0)/float(35.0)
+        self.path = self.path*scale
+        self.desired_path = self.desired_path*scale
+        thetas = [math.radians(45)]
+        for i in range(1,self.desired_path.shape[0]):
+            delta_x = self.desired_path[i, 0] - self.desired_path[i-1, 0]
+            delta_y = self.desired_path[i, 1] - self.desired_path[i-1, 1]
+            desired_heading = math.atan2(delta_y, delta_x)
+            thetas.append(desired_heading)
+        thetas = np.array(thetas)
+        thetas = np.reshape(thetas, (-1, 1))
+
+        self.desired_path = np.concatenate((self.desired_path, thetas), axis=1)
         print(self.desired_path)
         plt.plot(self.desired_path[:,0], self.desired_path[:,1],color='blue')
         plt.show()
 
     def computeNoiseFunction(self, fault):
-        fault_noise = self.noise_functions[fault, 0] * np.exp(self.noise_functions[fault, 1] * self.x) + self.noise_functions[fault, 2]
-        # white_noise = np.random.normal(0, 0.4)
+        fault_noise = self.noise_functions[fault, 0] / (1 + np.exp(-self.noise_functions[fault, 1] * (self.x + self.noise_functions[fault, 2])))
+        # fault_noise = self.noise_functions[fault, 0] * np.exp(self.noise_functions[fault, 1] * self.x) + self.noise_functions[fault, 2]
+        white_noise = np.random.normal(0, 0.01)
 
-        return fault_noise
+        return fault_noise + white_noise
 
     def dynamics(self, v, gamma, fault, dt):
         self.x = np.clip(self.x, -1e5, 1e5)
         self.x = np.float128(self.x)
-        #dynamics
-        noise = self.computeNoiseFunction(fault)
-        yaw_dot = ((v/self.L)*(math.tan(gamma)))*dt
-        x_dot = (v * math.cos(self.theta) - math.sin(self.theta)*(noise-self.prev_noise))*dt
-        y_dot = (v * math.sin(self.theta) + math.cos(self.theta)*(noise-self.prev_noise))*dt
 
-        #derivatives
+        if fault == 3:
+            # ideal dynamics
+            yaw_dot = ((v/self.L)*(math.tan(gamma)))*dt
+            x_dot = (v * math.cos(self.theta))*dt
+            y_dot = (v * math.sin(self.theta))*dt
+
+        else:
+            # fault dynamics
+            noise = self.computeNoiseFunction(fault)
+            yaw_dot = ((v/self.L)*(math.tan(gamma)))*dt
+            x_dot = (v * math.cos(self.theta) - math.sin(self.theta)*noise*0.1)*dt
+            y_dot = (v * math.sin(self.theta) + math.cos(self.theta)*noise*0.1)*dt
+
+            self.prev_noise = noise
+
+        # yaw_dot = np.clip(yaw_dot, -math.radians(45), math.radians(45))
+        # x_dot = np.clip(x_dot, -0.1, 0.1)
+        # y_dot = np.clip(y_dot, -0.1, 0.1)
+
         self.theta = self.theta + yaw_dot
         self.x = self.x + x_dot
         self.y = self.y + y_dot
-
-        self.prev_noise = noise
 
     def angdiff(self, a, b):
         diff = a - b
         if diff < 0.0:
             diff = (diff % (-2*math.pi))
-            print(diff)
             if diff < (-math.pi):
                 diff = diff + 2*math.pi
         else:
@@ -169,42 +194,35 @@ class Bicycle():
         self.prev_noise = 0.0
 
         while i >= 0:
-            self.desired_x = self.path[i, 0]
+            target = self.path[i, :]
             self.desired_y = self.path[i, 1]
             delta_x = self.desired_x - self.x
             delta_y = self.desired_y - self.y
             j = self.iter
             while j > 0:
-                delta_x = np.clip(self.desired_x - self.x, -1e50, 1e50)
-                delta_y = np.clip(self.desired_y - self.y, -1e50, 1e50)
-                self.desired_theta = math.atan2(delta_y, delta_x)
+                self.calculateError(target)
 
-                delta_theta = self.desired_theta - self.theta
-                delta_x2 = delta_x**2
-                delta_y2 = delta_y**2
-                if math.isinf(delta_x2):
-                    delta_x2 = 1e25
-                if math.isinf(delta_y2):
-                    delta_y2 = 1e25
-                distance = math.sqrt(delta_x2 + delta_y2)
-
-                x_error.append([delta_x])
-                y_error.append([delta_y])
-                t_error.append([delta_theta])
-                d_error.append([distance])
-                self.astar_path.append([self.x, self.y])
-                self.pid.calculatePID(distance, delta_theta, 0.1)
+                # x_error.append([delta_x])
+                # y_error.append([delta_y])
+                # t_error.append([delta_theta])
+                # d_error.append([distance])
+                self.astar_path.append([self.x, self.y, self.theta])
+                self.path_data.append([self.x, self.y, self.theta, self.pid.velocity, self.pid.steering, fault])
+                self.pid.calculatePID(self.distance_error, self.heading_error, 0.1)
                 self.dynamics(self.pid.velocity, self.pid.steering, fault, 0.1)
                 j = j - 1
             i = i - 1
         pid.fitness = self.objective()
-        return_dict[index] = pid.fitness
+        # print("fitness: %s" % pid.fitness)
+        if return_dict is not None:
+            return_dict[index] = pid.fitness
 
         if plot:
+            self.path_data = np.asarray(self.path_data)
             self.astar_path = np.asarray(self.astar_path)
             plt.figure(figsize = (7,7))
             plt.plot(self.astar_path[:, 0], self.astar_path[:, 1], color='red', linewidth=2)
-            plt.plot(self.desired_path[:,0], self.desired_path[:,1], color='blue')
+            plt.plot(self.path[:,0], self.path[:,1], color='blue')
             plt.xlabel('x')
             plt.ylabel('y')
             plt.title('UGV Path')
@@ -240,18 +258,20 @@ class Bicycle():
             # plt.title('UGV Distance Error')
             # plt.show()
 
-            path_data = x_error
-            path_data = np.concatenate((path_data, y_error), axis=1)
-            path_data = np.concatenate((path_data, t_error), axis=1)
-            path_data = np.concatenate((path_data, d_error), axis=1)
-            print(path_data.shape)
-
-            f=open("../data/ga_data.csv",'a')
-            np.savetxt(f, path_data, delimiter=",")
+            # path_data = x_error
+            # path_data = np.concatenate((path_data, y_error), axis=1)
+            # path_data = np.concatenate((path_data, t_error), axis=1)
+            # path_data = np.concatenate((path_data, d_error), axis=1)
+            # print(path_data.shape)
+            #
+            # f=open("../data/ga_data.csv",'a')
+            # np.savetxt(f, path_data, delimiter=",")
 
     def objective(self):
-        fitness = 0
-        for i in range(len(self.astar_path)):
-            fitness = fitness + np.linalg.norm(np.array(self.astar_path[i]) - np.array(self.desired_path[i]))
+        # fitness = 0
+        self.astar_path = np.array(self.astar_path)
+        fitness = np.linalg.norm(self.desired_path[20:, :] - self.astar_path)
+        # for i in range(len(self.astar_path)):
+        #     fitness = fitness + np.linalg.norm(np.array(self.astar_path[i]) - np.array(self.desired_path[i]))
 
         return fitness

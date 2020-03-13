@@ -10,8 +10,8 @@ class PID():
         self.last_theta = 0
         self.Integral_d = 0
         self.Integral_theta = 0
-        self.d_max = 1
-        self.theta_max = math.radians(39)
+        self.d_max = 1.0
+        self.theta_max = math.radians(45)
         self.fitness = 0
 
     def calculatePID(self, distance, heading, dt):
