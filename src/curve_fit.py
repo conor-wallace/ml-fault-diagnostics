@@ -5,7 +5,7 @@ from numpy.polynomial import Polynomial
 import pandas as pd
 
 def func(x, a, b, c):
-    return a / (1 + np.exp(-b * (x+c)))
+    return a*np.exp(b*x)+c
 
 data = pd.read_csv("~/catkin_ws/src/network_faults/data/lilbot_data.csv")
 dataset = data.to_numpy()
@@ -21,7 +21,7 @@ y = healthy_data[:,3]
 ydata = y
 ax1.scatter(xdata, ydata, color='#91bfdb', marker='.')
 
-popt, pcov = curve_fit(func, xdata, ydata, bounds=([-20, -1.0, -20], [20, 10.0, 20]))
+popt, pcov = curve_fit(func, xdata, ydata, bounds=([-20, -1.0, -100], [500, 10.0, 20]))
 print(popt)
 
 ax1.scatter(xdata, func(xdata, *popt), color=color, marker='p')

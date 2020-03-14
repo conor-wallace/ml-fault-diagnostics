@@ -49,7 +49,7 @@ def processData(path):
     # np.savetxt(f, distribution_data, delimiter=",")
 
 def func(x, a, b, c):
-    return a * np.exp(b * x) + c
+    return a*np.exp(b*x)+c
 
 def norm(x, x_hat):
     norm_vector = np.empty((x.shape[0], 1))
@@ -79,8 +79,8 @@ def cleanData(data, eta):
     x = data
     iteration = 0
     max_iter = 10
-    upper_bounds = [5, 1.0, 5]
-    lower_bounds = [-5, -1.0, -5]
+    upper_bounds = [5, 10.0, 5]
+    lower_bounds = [-5, -10.0, -5]
     run_opt, run_cov = curve_fit(func, x[:, 2], x[:, 3], bounds=(lower_bounds, upper_bounds))
 
     while run_norm >= eta and iteration != max_iter and x.shape[0] > 50:
@@ -120,7 +120,6 @@ def cleanData(data, eta):
             plt.scatter(data_zscore[:, 2], zscore_y_hat, color='blue', label="fitted data: iteration %s" % iteration)
             plt.title("Zscore Filtered Data")
             plt.legend()
-            plt.show()
 
             run_opt = zscore_popt
             run_norm = zscore_norm
@@ -131,12 +130,13 @@ def cleanData(data, eta):
             plt.scatter(data_iqr[:, 2], iqr_y_hat, color='blue', label="fitted data: iteration %s" % iteration)
             plt.title("IQR Filtered Data")
             plt.legend()
-            plt.show()
 
             run_opt = iqr_popt
             run_norm = iqr_norm
             x = data_iqr
             iteration += 1
+
+        plt.show()
 
     return run_opt
 

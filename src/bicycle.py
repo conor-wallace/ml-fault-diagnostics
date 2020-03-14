@@ -8,26 +8,28 @@ class Bicycle():
     def __init__(self, path):
         self.x = 0
         self.y = 0
-        self.theta = 0
+        self.theta = math.radians(45)
         self.path = path
         self.desired_x = 0
         self.desired_y = 0
         self.desired_theta = 0
         self.heading_error = 0.0
         self.distance_error = 100000.0
-        self.k = [0.3019153134631294, 0.0019364562790725396, 0.14442752451635107, 1.0706913654117989, 0.09469238869269857, 0.03872382526017986]
+        self.k = [4.77513214e-01, 7.21466250e-03, 2.71819786e+01, 3.72521390e+00, 2.31961582e+00, 1.64713994e+01]
         self.max_rad = 38.0
         self.max_vel = 1.0
+        self.max_iter = 45
         self.L = 0.19
         self.iter = 20
-        self.pid = PID(self.k)
+        self.pid = PID(0)
         self.desired_path = np.zeros(((self.path.shape[0])*self.iter,2))
         self.astar_path = []
         self.path_data = []
         self.prev_noise = 0.0
-        self.noise_functions = np.array([[0.79159172, 1.0, -2.67407148],
-                                         [2.11253316, 1.0, -2.90662845],
-                                         [-20.0, 1.0, -7.60034135], [0.0, 0.0, 0.0]])
+        self.noise_functions = np.array([[5.0, 0.02858067, -4.99487687],
+                                         [1.13284976, 0.22663204, -1.13644619],
+                                         [-0.19161766, 0.44401223, 0.19953161],
+                                         [0.0, 0.0, 0.0]])
 
     def createPath(self):
         C = np.zeros((40, 40))
@@ -87,7 +89,7 @@ class Bicycle():
             print(data.shape)
             print(self.desired_path.shape)
             self.desired_path[i*self.iter:i*self.iter+self.iter,:] = data
-        scale = float(35.0)/float(35.0)
+        scale = float(3.0)/float(35.0)
         self.path = self.path*scale
         self.desired_path = self.desired_path*scale
         thetas = [math.radians(45)]
@@ -105,9 +107,9 @@ class Bicycle():
         plt.show()
 
     def computeNoiseFunction(self, fault):
-        fault_noise = self.noise_functions[fault, 0] / (1 + np.exp(-self.noise_functions[fault, 1] * (self.x + self.noise_functions[fault, 2])))
-        # fault_noise = self.noise_functions[fault, 0] * np.exp(self.noise_functions[fault, 1] * self.x) + self.noise_functions[fault, 2]
-        white_noise = np.random.normal(0, 0.01)
+        # fault_noise = self.noise_functions[fault, 0] / (1 + np.exp(-self.noise_functions[fault, 1] * (self.x + self.noise_functions[fault, 2])))
+        fault_noise = self.noise_functions[fault, 0] * np.exp(self.noise_functions[fault, 1] * self.x) + self.noise_functions[fault, 2]
+        white_noise = np.random.normal(0, 0.0)
 
         return fault_noise + white_noise
 
@@ -125,8 +127,8 @@ class Bicycle():
             # fault dynamics
             noise = self.computeNoiseFunction(fault)
             yaw_dot = ((v/self.L)*(math.tan(gamma)))*dt
-            x_dot = (v * math.cos(self.theta) - math.sin(self.theta)*noise*0.1)*dt
-            y_dot = (v * math.sin(self.theta) + math.cos(self.theta)*noise*0.1)*dt
+            x_dot = (v * math.cos(self.theta))*dt
+            y_dot = (v * math.sin(self.theta))*dt + (noise-self.prev_noise)
 
             self.prev_noise = noise
 
@@ -180,6 +182,23 @@ class Bicycle():
     #         delta_y2 = 1e25
     #     self.distance_error = math.sqrt(delta_x2 + delta_y2)
 
+    def driveOpenLoop(self, fault, color):
+        self.path_data = []
+        i = 0
+
+        while(i != self.max_iter):
+            self.path_data.append([self.x, self.y])
+            self.dynamics(0.6, 0.0, fault, 0.1)
+            i += 1
+
+        path = np.asarray(self.path_data)
+        print(path.shape)
+        plt.scatter(path[:, 0], path[:, 1], color=color)
+        plt.xlabel("x (meters)")
+        plt.ylabel("y (meters)")
+        plt.title("UGV Path: Problem 1.a)")
+        plt.show()
+
     def driveAlongPath(self, index, pid, return_dict, plot, fault):
         self.pid.k = pid.k
         i = len(self.path) - 2
@@ -192,6 +211,9 @@ class Bicycle():
         t_error = []
         d_error = []
         self.prev_noise = 0.0
+        self.path_data = []
+        self.astar_path = []
+        count = 0
 
         while i >= 0:
             target = self.path[i, :]
@@ -207,7 +229,8 @@ class Bicycle():
                 # t_error.append([delta_theta])
                 # d_error.append([distance])
                 self.astar_path.append([self.x, self.y, self.theta])
-                self.path_data.append([self.x, self.y, self.theta, self.pid.velocity, self.pid.steering, fault])
+                self.path_data.append([self.x, self.y, self.theta, self.pid.velocity, self.pid.steering, count, fault])
+                count += 1
                 self.pid.calculatePID(self.distance_error, self.heading_error, 0.1)
                 self.dynamics(self.pid.velocity, self.pid.steering, fault, 0.1)
                 j = j - 1
@@ -221,8 +244,8 @@ class Bicycle():
             self.path_data = np.asarray(self.path_data)
             self.astar_path = np.asarray(self.astar_path)
             plt.figure(figsize = (7,7))
-            plt.plot(self.astar_path[:, 0], self.astar_path[:, 1], color='red', linewidth=2)
-            plt.plot(self.path[:,0], self.path[:,1], color='blue')
+            plt.plot(self.astar_path[:, 0], self.astar_path[:, 1], color='orange', linewidth=2)
+            plt.plot(self.path[:,0], self.path[:,1], color='blue', linestyle=':', linewidth=4)
             plt.xlabel('x')
             plt.ylabel('y')
             plt.title('UGV Path')
@@ -270,7 +293,7 @@ class Bicycle():
     def objective(self):
         # fitness = 0
         self.astar_path = np.array(self.astar_path)
-        fitness = np.linalg.norm(self.desired_path[20:, :] - self.astar_path)
+        fitness = np.linalg.norm(self.desired_path[20:, :] - self.astar_path)**2
         # for i in range(len(self.astar_path)):
         #     fitness = fitness + np.linalg.norm(np.array(self.astar_path[i]) - np.array(self.desired_path[i]))
 

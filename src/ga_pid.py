@@ -27,7 +27,7 @@ class GA():
         self.fit_plot = []
         self.fault = fault
         self.mu = np.array([10.0, 1.0, 0.1, 20.0, 1.0, 0.1])
-        self.sigma = np.array([10.0, 1.0, 0.1, 20.0, 1.0, 0.1])
+        self.sigma = np.array([3.0, 3.0, 3.0, 3.0, 3.0, 3.0])
 
     def setup(self):
         for i in range(self.population_size):
@@ -44,6 +44,7 @@ class GA():
 
     def evolve(self):
         i = self.generations
+        k = 0
         while i > 0 and self.fittest.fitness > self.eta:
             print("Generation #%s" % (self.generations - i + 1))
             print("calculate fitness")
@@ -51,7 +52,11 @@ class GA():
             print("select parents")
             parents = self.selection()
             self.mu = self.fittest.k
-            self.sigma = self.sigma * 1.0
+            print(str(float(1.0/self.generations)))
+            print(str(float(self.generations - k)))
+            rate = (float(1.0/self.generations)*float(self.generations - k))
+            print("Mutation Rate: %s" % rate)
+            self.sigma = (3 * rate)*np.ones(6)
             print("New mu")
             print(self.mu)
             print("New sigma")
@@ -61,6 +66,7 @@ class GA():
             print("mutation")
             self.mutation()
             i = i - 1
+            k += 1
 
         print("done evolving")
         return_dict = [0]
@@ -180,8 +186,6 @@ class GA():
     def mutation(self):
         print("build mutation")
         for i in range(self.number_parents, self.population.shape[0]):
-            mutate = np.random.uniform(0,1)
-            # if mutate < self.mutation_rate:
             if np.random.uniform(0,1) < self.mutation_rate:
                 self.population[i].k[0] = math.fabs(np.random.normal(self.mu[0], self.sigma[0]))
             if np.random.uniform(0,1) < self.mutation_rate:

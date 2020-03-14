@@ -45,32 +45,65 @@ while not rospy.is_shutdown():
                     stop = 1
 
     if stop and not target:
-        # ideal_condition = 3
-        # ideal_bicycle = Bicycle(path)
-        # ideal_bicycle.createPath()
-        # ideal_bicycle.driveAlongPath(0, ideal_bicycle.pid, None, 1, ideal_condition)
-        fault_condition = 2
-        faulty_bicycle = Bicycle(path)
-        faulty_bicycle.createPath()
+        # print(path)
+        # f = open('/home/ace/catkin_ws/src/network_faults/data/path.csv', 'w')
+        # np.savetxt(f, path, delimiter=",")
+        ideal_condition = 3
+        ideal_bicycle = Bicycle(path)
+        ideal_bicycle.createPath()
+        ideal_bicycle.driveAlongPath(0, ideal_bicycle.pid, None, 1, ideal_condition)
 
-        # faulty_bicycle.driveAlongPath(0, faulty_bicycle.pid, None, 1, fault_condition)
-        # residual_path_data = faulty_bicycle.path_data.copy()
-        # print(residual_path_data[:, 0:3].shape)
-        # residual_path_data[:, 0:3] = residual_path_data[:, 0:3] - ideal_bicycle.path_data[:, 0:3]
-        # print(residual_path_data.shape)
-        ga = GA(100, 20, faulty_bicycle, fault_condition)
-        ga.setup()
-        optimal_k = ga.evolve()
-        optimal_k = list(optimal_k)
-        pid_msg.gain = optimal_k
-        print(optimal_k)
+        healthy_fault_condition = 0
+        healthy_fault_bicycle = Bicycle(path)
+        healthy_fault_bicycle.createPath()
+        healthy_fault_bicycle.driveOpenLoop(healthy_fault_condition, 'green')
+
+        for i in range(1):
+            healthy_residual_path_data = []
+            healthy_fault_bicycle.driveAlongPath(0, healthy_fault_bicycle.pid, None, 1, healthy_fault_condition)
+            healthy_residual_path_data = healthy_fault_bicycle.path_data.copy()
+            # healthy_residual_path_data[:, 0:3] = healthy_residual_path_data[:, 0:3] - ideal_bicycle.path_data[:, 0:3]
+            # f = open('/home/ace/catkin_ws/src/network_faults/data/path_data.csv', 'a')
+            # np.savetxt(f, healthy_residual_path_data, delimiter=",")
+
+        left_fault_condition = 1
+        left_fault_bicycle = Bicycle(path)
+        left_fault_bicycle.createPath()
+        left_fault_bicycle.driveOpenLoop(left_fault_condition, 'red')
+
+        for j in range(1):
+            left_residual_path_data = []
+            left_fault_bicycle.driveAlongPath(0, left_fault_bicycle.pid, None, 1, left_fault_condition)
+            left_residual_path_data = left_fault_bicycle.path_data.copy()
+            # left_residual_path_data[:, 0:3] = left_residual_path_data[:, 0:3] - ideal_bicycle.path_data[:, 0:3]
+            # f = open('/home/ace/catkin_ws/src/network_faults/data/path_data.csv', 'a')
+            # np.savetxt(f, left_residual_path_data, delimiter=",")
+
+        right_fault_condition = 2
+        right_fault_bicycle = Bicycle(path)
+        right_fault_bicycle.createPath()
+        right_fault_bicycle.driveOpenLoop(right_fault_condition, 'blue')
+
+        for k in range(1):
+            right_residual_path_data = []
+            right_fault_bicycle.driveAlongPath(0, right_fault_bicycle.pid, None, 1, right_fault_condition)
+            right_residual_path_data = right_fault_bicycle.path_data.copy()
+            # right_residual_path_data[:, 0:3] = right_residual_path_data[:, 0:3] - ideal_bicycle.path_data[:, 0:3]
+            # f = open('/home/ace/catkin_ws/src/network_faults/data/path_data.csv', 'a')
+            # np.savetxt(f, right_residual_path_data, delimiter=",")
+
+        # ga = GA(100, 500, faulty_bicycle, fault_condition)
+        # ga.setup()
+        # optimal_k = ga.evolve()
+        # optimal_k = list(optimal_k)
+        # pid_msg.gain = optimal_k
+        # print(optimal_k)
         #
         # dict_file = dict(Matrix=np.array(optimal_k))
         #
         # with open('/home/conor/catkin_ws/src/network_faults/data/pid_file.yaml', 'w') as file:
         #     documents = yaml.dump(dict_file, file, default_flow_style=False)
-        # f = open('/home/conor/catkin_ws/src/network_faults/data/path_data.csv', 'a')
-        # np.savetxt(f, residual_path_data, delimiter=",")
+
         sys.exit(1)
     pid_pub.publish(pid_msg)
     rate.sleep()
