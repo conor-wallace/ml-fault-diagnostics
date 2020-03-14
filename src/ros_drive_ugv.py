@@ -99,7 +99,7 @@ def driveClosedLoop(ideal_ugv, faulty_ugv, ideal_condition, fault_condition):
         rate.sleep()
 
 if __name__ == '__main__':
-    path = '/home/ace/catkin_ws/src/network_faults/data/path.csv'
+    path = '../data/path.csv'
     df = pd.read_csv(path)
     coordinates = df.to_numpy()
 

@@ -20,6 +20,7 @@ from keras.models import Model
 from keras.layers import Dense, CuDNNLSTM
 from keras.models import model_from_yaml
 from pid import PID
+import timeit
 
 # TODO:
 # a.) convert this to ROS and Unity
@@ -34,7 +35,7 @@ target = np.empty(2)
 fault = 0
 
 def loadScaler():
-    path = '/home/ace/catkin_ws/src/network_faults/data/path_data.csv'
+    path = '../data/path_data.csv'
     df = pd.read_csv(path)
     dataset = df[['%x','%y','%theta','%velocity','%steering','%iteration']]
     dataset = dataset.to_numpy()
@@ -96,6 +97,7 @@ def processData(pid, scaler, model):
     data = np.empty((timesteps, num_features))
     sample_count = 0
     true_positive = 0
+    runtimes = []
 
     while not rospy.is_shutdown():
         if ideal_pose is not None:
@@ -104,6 +106,9 @@ def processData(pid, scaler, model):
                 faulty_velocity.velocity, faulty_velocity.steering = 0.0, 0.0
                 velocity_publisher.publish(msg)
                 rate.sleep()
+                runtimes = np.array(runtimes)
+                f = open('../data/runtime.csv', 'a')
+                np.savetxt(f, runtimes, delimiter=",")
                 sys.exit(1)
             # Compute PID
             time = rospy.get_time() - start_time
@@ -129,7 +134,12 @@ def processData(pid, scaler, model):
                 data = np.delete(data, 0, 0)
                 data = np.append(data, features, axis=0)
                 #make predictions
+                start_time1 = timeit.default_timer()
                 y_hat = model.predict(x=np.reshape(data, (1, timesteps, num_features)))
+                elapsed1 = timeit.default_timer() - start_time1
+                elapsed1 = round((elapsed1*1000.0), 5)
+                print('Finished in %s second(s)' % elapsed1)
+                runtimes.append([elapsed1])
                 sample_count += 1
                 # print(y_hat)
                 if np.argmax(y_hat) == 0:
@@ -162,8 +172,8 @@ if __name__ == '__main__':
     scaler = loadScaler()
 
     # Load LSTM Model
-    model_path = '/home/ace/catkin_ws/src/network_faults/data/model1.yaml'
-    weights_path = '/home/ace/catkin_ws/src/network_faults/data/model1.h5'
+    model_path = '../data/model1.yaml'
+    weights_path = '../data/model1.h5'
     model = loadModel(model_path, weights_path)
 
     # Get PID models
