@@ -14,6 +14,11 @@ from json import dumps
 from time import sleep
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
+from sklearn import svm
+from sklearn.linear_model import LogisticRegression
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis, QuadraticDiscriminantAnalysis
+from sklearn.model_selection import train_test_split
 import tensorflow as tf
 from keras import optimizers, Sequential
 from keras.models import Model
@@ -33,6 +38,30 @@ faulty_pose = None
 residual = np.empty(3)
 target = np.empty(2)
 fault = 0
+
+def trainAlternativeModel():
+    path = '../data/path_data.csv'
+    df = pd.read_csv(path)
+    dataset = df[['%x', '%y', '%theta', '%velocity', '%steering', '%iteration', '%label']]
+    dataset = dataset.to_numpy()
+    data = dataset[:, :-1]
+    print(data.shape)
+    labels = np.reshape(dataset[:, -1], (-1, 1))
+
+    scaler = MinMaxScaler(feature_range=(-1, 1))
+    normalized_data = scaler.fit_transform(data)
+    X_train, X_test, y_train, y_test = train_test_split(normalized_data, labels, test_size=0.33, random_state=42)
+
+    model = QuadraticDiscriminantAnalysis()
+    # model = LinearDiscriminantAnalysis()
+    # model = KNeighborsClassifier()
+    # model = LogisticRegression()
+    # model = svm.SVC()
+    model.fit(X_train, y_train)
+
+    print("Trained Model Ready")
+
+    return model
 
 def loadScaler():
     path = '../data/path_data.csv'
@@ -71,7 +100,7 @@ def poseCallback(msg):
     target[0] = faulty_pose.orientation.y
     target[1] = faulty_pose.orientation.w
 
-def processData(pid, scaler, model):
+def processData(pid, scaler, model, model_class):
     global ideal_pose, faulty_pose, fault, target
     # initialize node
     rospy.init_node('fault_data', anonymous = True)
@@ -107,8 +136,8 @@ def processData(pid, scaler, model):
                 velocity_publisher.publish(msg)
                 rate.sleep()
                 runtimes = np.array(runtimes)
-                f = open('../data/runtime.csv', 'a')
-                np.savetxt(f, runtimes, delimiter=",")
+                # f = open('../data/runtime.csv', 'a')
+                # np.savetxt(f, runtimes, delimiter=",")
                 sys.exit(1)
             # Compute PID
             time = rospy.get_time() - start_time
@@ -127,19 +156,13 @@ def processData(pid, scaler, model):
             features = scaler.transform(feature_vector)
             label = float(faulty_pose.orientation.x)
 
-            if np.isnan(np.sum(data)):
-                data = np.delete(data, 0, 0)
-                data = np.append(data, features, axis=0)
-            else:
-                data = np.delete(data, 0, 0)
-                data = np.append(data, features, axis=0)
-                #make predictions
+            if model_class != 0:
                 start_time1 = timeit.default_timer()
-                y_hat = model.predict(x=np.reshape(data, (1, timesteps, num_features)))
+                y_hat = model.predict(features)
                 elapsed1 = timeit.default_timer() - start_time1
                 elapsed1 = round((elapsed1*1000.0), 5)
                 print('Finished in %s second(s)' % elapsed1)
-                runtimes.append([elapsed1])
+                runtimes.append([elapsed1, model_class])
                 sample_count += 1
                 # print(y_hat)
                 if np.argmax(y_hat) == 0:
@@ -158,6 +181,38 @@ def processData(pid, scaler, model):
                 if true_positive > 0:
                     accuracy = float(true_positive)/float(sample_count) * 100
                     print("Prediction Accuracy: %s" % accuracy)
+            else:
+                if np.isnan(np.sum(data)):
+                    data = np.delete(data, 0, 0)
+                    data = np.append(data, features, axis=0)
+                else:
+                    data = np.delete(data, 0, 0)
+                    data = np.append(data, features, axis=0)
+                    #make predictions
+                    start_time1 = timeit.default_timer()
+                    y_hat = model.predict(x=np.reshape(data, (1, timesteps, num_features)))
+                    elapsed1 = timeit.default_timer() - start_time1
+                    elapsed1 = round((elapsed1*1000.0), 5)
+                    print('Finished in %s second(s)' % elapsed1)
+                    runtimes.append([elapsed1, model_class])
+                    sample_count += 1
+                    # print(y_hat)
+                    if np.argmax(y_hat) == 0:
+                        print("Predicted: Healthy")
+                        if label == 0.0:
+                            true_positive += 1
+                    elif np.argmax(y_hat) == 1:
+                        print("Predicted: Left Fault")
+                        if label == 1.0:
+                            true_positive += 1
+                    else:
+                        print("Predicted: Right Fault")
+                        if label == 2.0:
+                            true_positive += 1
+
+                    if true_positive > 0:
+                        accuracy = float(true_positive)/float(sample_count) * 100
+                        print("Prediction Accuracy: %s" % accuracy)
 
             previous_time = rospy.get_time()
             iteration += 1
@@ -171,17 +226,21 @@ if __name__ == '__main__':
     # Create a MinMaxScaler
     scaler = loadScaler()
 
-    # Load LSTM Model
-    model_path = '../data/model1.yaml'
-    weights_path = '../data/model1.h5'
-    model = loadModel(model_path, weights_path)
+    # # Load LSTM Model
+    # model_path = '../data/model1.yaml'
+    # weights_path = '../data/model1.h5'
+    # model = loadModel(model_path, weights_path)
+
+    # Alternative Model
+    model = trainAlternativeModel()
 
     # Get PID models
     fault = 0
     pid = PID(fault)
 
+    model_class = 5
     # Process Data
-    processData(pid, scaler, model)
+    processData(pid, scaler, model, model_class)
 
     # data = np.concatenate((path1_error, path2_error, path3_error), axis=0)
     # # print(data)

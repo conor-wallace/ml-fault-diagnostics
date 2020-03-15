@@ -107,7 +107,7 @@ if __name__ == '__main__':
     ideal_bicycle = Bicycle(coordinates)
     ideal_bicycle.createPath()
 
-    fault_condition = 0
+    fault_condition = 1
     fault_bicycle = Bicycle(coordinates)
     fault_bicycle.createPath()
 
