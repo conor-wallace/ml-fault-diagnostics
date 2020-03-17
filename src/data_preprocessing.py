@@ -17,6 +17,9 @@ def processData(path):
     last_iteration = 0.0
     label = 0
     count = 0
+    healthy = []
+    left = []
+    right = []
 
     for i in range(dataset.shape[0]):
         if dataset[i, 1] < last_iteration or i == dataset.shape[0] - 1:
@@ -24,10 +27,17 @@ def processData(path):
             run = np.reshape(run, (-1, 7))
 
             # TODO: clean run and calculate statistics
-            eta = 0.15
+            eta = 0.1
             noise_function = cleanData(run, eta)
             noise_functions.append(np.concatenate((noise_function, label), axis=None))
             print(noise_function)
+
+            if label == 0:
+                healthy.append(run)
+            elif label == 1:
+                left.append(run)
+            else:
+                right.append(run)
 
             count += 1
             if count % 4 == 0:
@@ -40,13 +50,79 @@ def processData(path):
             run.append(dataset[i, :])
             last_iteration = dataset[i, 1]
 
+    healthy = np.array(healthy)
+    print(healthy.shape)
+    healthy = np.reshape(healthy, (healthy.shape[0]*healthy.shape[1], 7))
+
+    left = np.array(left)
+    print(left.shape)
+    left = np.reshape(left, (-1, 7))
+
+    right = np.array(right)
+    print(right.shape)
+    right = np.reshape(right, (right.shape[0]*right.shape[1], 7))
+
+    f, (ax1, ax2, ax3) = plt.subplots(1, 3)
+    color = 'black'
+    xdata = healthy[:,2]
+    print(xdata)
+    y = healthy[:,3]
+    ydata = y
+    ax1.scatter(xdata, ydata, color='#91bfdb', marker='.')
+
+    popt, pcov = curve_fit(func, xdata, ydata, bounds=([-20, -1.0, -100], [500, 10.0, 20]))
+    print(popt)
+
+    ax1.scatter(xdata, func(xdata, *popt), color=color, marker='p')
+
+    ax1.set_ylabel('y')
+    ax1.set_xlabel('x')
+    ax1.set_xlim(-0.1,3.1)
+    ax1.set_ylim(-0.6,0.95)
+    ax1.legend()
+    ax1.set_title('Healthy Trajectory')
+
+    xdata = left[:,2]
+    y = left[:,3]
+    ydata = y
+    ax2.scatter(xdata, ydata, color='#FFC39D', marker='.')
+
+    popt, pcov = curve_fit(func, xdata, ydata, bounds=([-20, -1.0, -20], [20, 10.0, 20]))
+    print(popt)
+
+    ax2.scatter(xdata, func(xdata, *popt), color=color, marker='p')
+
+    ax2.set_xlabel('x')
+    ax2.set_xlim(-0.1,3.1)
+    ax2.set_ylim(-0.6,0.95)
+    ax2.legend()
+    ax2.set_title('Left Fault Trajectory')
+
+    xdata = right[:,2]
+    y = right[:,3]
+    ydata = y
+    ax3.scatter(xdata, ydata, color='#99d594', marker='.')
+
+    popt, pcov = curve_fit(func, xdata, ydata, method='trf', bounds=([-40, -1.0, -20], [20, 10.0, 20]))
+    print(popt)
+
+    ax3.scatter(xdata, func(xdata, *popt), color=color, marker='p')
+
+    ax3.set_xlabel('x')
+    ax3.set_xlim(-0.1,3.1)
+    ax3.set_ylim(-0.6,0.95)
+    ax3.legend()
+    ax3.set_title('Right Fault Trajectory')
+
+    plt.show()
+
     noise_functions = np.array(noise_functions)
-    print(noise_functions[:, :-1])
-    healthy_distribution, left_distribution, right_distribution = computeDistribution(noise_functions)
-    distribution_data = np.array([healthy_distribution, left_distribution, right_distribution])
-    print(distribution_data.shape)
-    # f = open('/home/conor/catkin_ws/src/network_faults/data/distributions.csv', 'a')
-    # np.savetxt(f, distribution_data, delimiter=",")
+    print(noise_functions)
+    # healthy_distribution, left_distribution, right_distribution = computeDistribution(noise_functions)
+    # distribution_data = np.array([healthy_distribution, left_distribution, right_distribution])
+    # print(distribution_data.shape)
+    f = open('/home/conor/catkin_ws/src/network_faults/data/noise_functions.csv', 'a')
+    np.savetxt(f, noise_functions, delimiter=",")
 
 def func(x, a, b, c):
     return a*np.exp(b*x)+c
@@ -78,12 +154,21 @@ def cleanData(data, eta):
     run_norm = 100.0
     x = data
     iteration = 0
-    max_iter = 10
-    upper_bounds = [5, 10.0, 5]
-    lower_bounds = [-5, -10.0, -5]
+    max_iter = 20
+    upper_bounds = np.array([20, 1.0, 20])
+    lower_bounds = np.array([-20, -1.0, -20])
+    range = 1.0
+    count = 0.0
     run_opt, run_cov = curve_fit(func, x[:, 2], x[:, 3], bounds=(lower_bounds, upper_bounds))
 
     while run_norm >= eta and iteration != max_iter and x.shape[0] > 50:
+        # upper_bounds = upper_bounds + upper_bounds*range
+        # lower_bounds = lower_bounds + lower_bounds*range
+        print("upper bounds")
+        print(upper_bounds)
+        print("lower bounds")
+        print(lower_bounds)
+        print("count: %s" % count)
         print("run norm: %s" % run_norm)
         popt, pcov = curve_fit(func, x[:, 2], x[:, 3], bounds=(lower_bounds, upper_bounds))
         y_hat = func(x[:, 2], *popt)
@@ -136,7 +221,10 @@ def cleanData(data, eta):
             x = data_iqr
             iteration += 1
 
-        plt.show()
+        range = 1.0
+        count += 1
+
+        # plt.show()
 
     return run_opt
 
