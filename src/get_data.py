@@ -17,70 +17,100 @@ from geometry_msgs.msg import PoseStamped
 from tf.transformations import euler_from_quaternion
 from message_filters import TimeSynchronizer, Subscriber
 
-data = []
-path = []
-first_read = 1
-first_time = 0.0
-samples = 450
-features = 7
+def get_data(label):
+    data = []
+    path = []
+    first_read = 1
+    first_time = 0.0
+    samples = 270
+    features = 4
 
-rospy.init_node('GetData', anonymous=True)
-rate = rospy.Rate(100.0)
-publisher = 'lilbot_SIMULATION'
-# publisher = 'lilbot_6ADE87'
-tfBuffer = tf2_ros.Buffer()
-listener = tf2_ros.TransformListener(tfBuffer)
-stamp_iter = 0
+    rospy.init_node('GetData', anonymous=True)
+    rate = rospy.Rate(50.0)
+    # publisher = 'lilbot_SIMULATION'
+    publisher = 'lilbot_EFD047'
+    tfBuffer = tf2_ros.Buffer()
+    listener = tf2_ros.TransformListener(tfBuffer)
+    stamp_iter = 0
+    initial_pose = PoseStamped()
 
-while not rospy.is_shutdown():
-    try:
-        # trans = tfBuffer.lookup_transform(publisher+'/World Frame', publisher+'/Base Frame', rospy.Time())
-        trans = tfBuffer.lookup_transform("odom", publisher+"/Base Frame", rospy.Time())
-    except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
+    while not rospy.is_shutdown():
+        try:
+            trans = tfBuffer.lookup_transform(publisher+'/World Frame', publisher+'/Base Frame', rospy.Time())
+            # trans = tfBuffer.lookup_transform(publisher+'/World Frame', 'Lighthouse Frame', rospy.Time())
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
+            rate.sleep()
+            print "Error", e
+            continue
+
+        if first_read:
+            quaternion_trans = (
+                trans.transform.rotation.x,
+                trans.transform.rotation.y,
+                trans.transform.rotation.z,
+                trans.transform.rotation.w)
+            euler_trans = euler_from_quaternion(quaternion_trans)
+            roll_trans = euler_trans[0]
+            pitch_trans = euler_trans[1]
+            yaw_trans = euler_trans[2]
+            initial_pose.pose.position.x = trans.transform.translation.x
+            initial_pose.pose.position.y = trans.transform.translation.y
+            initial_pose.pose.orientation.z = yaw_trans
+            first_time = trans.header.stamp.to_sec()
+            first_read = 0
+
+        stamp_time = trans.header.stamp.to_sec() - first_time
+        stamp_iter += 1
+        dx_trans = round((trans.transform.translation.x), 5)
+        dy_trans = round((trans.transform.translation.y), 5)
+
+        quaternion_trans = (
+            trans.transform.rotation.x,
+            trans.transform.rotation.y,
+            trans.transform.rotation.z,
+            trans.transform.rotation.w)
+        print("Lighthouse to World Quat")
+        print(quaternion_trans)
+        print("Quat sSummation: %s" % np.sum(np.array(quaternion_trans)))
+        euler_trans = euler_from_quaternion(quaternion_trans)
+        roll_trans = euler_trans[0]
+        pitch_trans = euler_trans[1]
+        yaw_trans = euler_trans[2]
+
+        yaw_trans = yaw_trans - initial_pose.pose.orientation.z
+
+        print("x: %s y: %s, yaw: %s" % (dx_trans, dy_trans, yaw_trans))
+
+        data.append([dx_trans, dy_trans, yaw_trans, label])
+        path.append([dx_trans, dy_trans])
+
+        if len(data) == samples:
+            print("converting data to csv")
+            data = np.array(data)
+            data = np.reshape(data, [-1, features])
+            path = np.array(path)
+            path = np.reshape(path, [-1, 2])
+
+            return data, path
+
         rate.sleep()
-        print "Error", e
-        continue
 
-    if first_read:
-        first_time = trans.header.stamp.to_sec()
-        first_read = 0
+if __name__ == '__main__':
+    label = 2
+    data, path = get_data(label)
 
-    stamp_time = trans.header.stamp.to_sec() - first_time
-    stamp_iter += 1
-    dx_trans = round(trans.transform.translation.x, 3)
-    dy_trans = round(trans.transform.translation.y, 3)
-    print("x: %s y: %s" % (dx_trans, dy_trans))
+    plt.scatter(path[:, 0], path[:, 1], color='blue')
+    plt.xlabel('x')
+    plt.ylabel('y')
+    # plt.ylim(-0.1,0.6)
+    plt.title('Healthy Path Data')
+    plt.show()
 
-    quaternion_trans = (
-        trans.transform.rotation.x,
-        trans.transform.rotation.y,
-        trans.transform.rotation.z,
-        trans.transform.rotation.w)
-    euler_trans = euler_from_quaternion(quaternion_trans)
-    roll_trans = euler_trans[0]
-    pitch_trans = euler_trans[1]
-    yaw_trans = euler_trans[2]
+    decision = raw_input("Would you like to save this run? ")
+    print("You answered %s" % decision)
 
-    data.append([stamp_time, stamp_iter, dx_trans, dy_trans, roll_trans, pitch_trans, yaw_trans])
-    path.append([dx_trans, dy_trans])
+    if decision == 'y':
+        f=open("../data/noise_data.csv",'a')
+        np.savetxt(f, data, delimiter=",")
 
-    if len(data) == samples:
-        print("converting data to csv")
-        data = np.array(data)
-        data = np.reshape(data, [samples, features])
-        path = np.array(path)
-        path = np.reshape(path, [samples, 2])
-
-        # f=open("../data/lilbot_data.csv",'a')
-        # np.savetxt(f, data, delimiter
-
-        plt.scatter(path[:, 0], path[:, 1], color='blue')
-        plt.xlabel('x')
-        plt.ylabel('y')
-        plt.ylim(-0.1,0.6)
-        plt.title('Healthy Path Data')
-        plt.show()
-
-        sys.exit(1)
-
-    rate.sleep()
+    sys.exit(1)

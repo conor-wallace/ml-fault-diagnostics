@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 if __name__ == '__main__':
 
     rospy.init_node('lilbot_controller_tf2_listener')
-    lilbotPub = rospy.Publisher("/lilbot_6ADE87/cmd", Int16MultiArray, queue_size=1, tcp_nodelay=True)
+    lilbotPub = rospy.Publisher("/lilbot_EFD047/cmd", Int16MultiArray, queue_size=1, tcp_nodelay=True)
     msg = Int16MultiArray()
     rate = rospy.Rate(10.0)
     xv1 = xv2 = xv = wv = 0
@@ -24,8 +24,8 @@ if __name__ == '__main__':
     while not rospy.is_shutdown():
 
         if count != samples:
-            xv1 = 150
-            xv2 = 150
+            xv1 = 100
+            xv2 = 100
             wv = 0
 
             msg.data = [int(-xv1),int(-xv2),0,int(-wv)]
