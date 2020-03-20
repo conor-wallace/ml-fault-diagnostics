@@ -7,7 +7,7 @@ def normal(x, mu, sigma):
     print(x.shape)
     return (1.0/(sigma*np.sqrt(2*np.pi)))*(np.exp(-((x-mu)/sigma)**2/2.0))
 
-df1 = pd.read_csv("/home/ace/catkin_ws/src/network_faults/data/noise_functions.csv")
+df1 = pd.read_csv("/home/conor/catkin_ws/src/network_faults/data/noise_functions.csv")
 noise_data = df1[['%x1', '%x2', '%x3']]
 noise_data = noise_data.to_numpy()
 labels = df1[['%label']]
@@ -18,13 +18,13 @@ left_function = noise_data[(labels==1).all(axis=1)]
 right_function = noise_data[(labels==2).all(axis=1)]
 print(healthy_function.shape)
 
-index = 0
+index = 2
 
-count, healthy_bins, ignored = plt.hist(healthy_function[:, index], color='#91bfdb', label='Healthy x1 parameter', density=True)
-count, left_bins, ignored = plt.hist(left_function[:, index], color='#FFC39D', label='Left fault x1 parameter')
-count, right_bins, ignored = plt.hist(right_function[:, index], color='#99d594', label='Right fault x1 parameter')
+count, healthy_bins, ignored = plt.hist(healthy_function[:, index], color='#91bfdb', label='Healthy x3 parameter', density=True)
+count, left_bins, ignored = plt.hist(left_function[:, index], color='#FFC39D', label='Left fault x3 parameter')
+count, right_bins, ignored = plt.hist(right_function[:, index], color='#99d594', label='Right fault x3 parameter')
 plt.legend()
-plt.title('Noise Function Parameter X1 Distributions')
+plt.title('Noise Function Parameter X3 Distributions')
 plt.xlabel('parameter value')
 plt.ylabel('number of occurences of values')
 # plt.ylim(0,50)
@@ -32,7 +32,7 @@ plt.ylabel('number of occurences of values')
 
 # count, bins, ignored = plt.hist(s, 30, density=True)
 
-df2 = pd.read_csv("/home/ace/catkin_ws/src/network_faults/data/distributions.csv")
+df2 = pd.read_csv("/home/conor/catkin_ws/src/network_faults/data/distributions.csv")
 dist_data = df2[['%mean1','%mean2','%mean3','%var1','%var2','%var3','%label']]
 dist_data = dist_data.to_numpy()
 dist_labels = df2[['%label']]

@@ -57,15 +57,17 @@ class Bicycle():
                 #     print(coordinate)
                 #     C[i, j] = 10
                 #     path_count -= 1
-
+        scale = float(3.0)/float(35.0)
+        C = C*scale
         plt.imshow(C, cmap='Greys')
         plt.gca().invert_yaxis()
-        plt.ylabel("y")
-        plt.xlabel("x")
+        plt.ylabel("y (meters)")
+        plt.xlabel("x (meters)")
         plt.title("A* Optimal Path")
         x = self.path
         x = np.flip(x,0)
         print(x)
+        x = x*scale
         plt.plot(x[:,0], x[:,1], 'o')
         for i in range(1,x.shape[0]):
             if x[i, 0]-x[i-1, 0] == 0.0:

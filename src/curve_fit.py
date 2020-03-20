@@ -14,6 +14,15 @@ healthy_data = dataset[dataset[:,-1]==0]
 left_data = dataset[dataset[:,-1]==1]
 right_data = dataset[dataset[:,-1]==2]
 
+plt.scatter(healthy_data[:,0], healthy_data[:,1], color='#91bfdb', marker='.', label='healthy data')
+plt.scatter(left_data[:,0], left_data[:,1], color='#FFC39D', marker='.', label='left fault')
+plt.scatter(right_data[:,0], right_data[:,1], color='#99d594', marker='.', label='right fault')
+plt.title("Fault Trajectory Data")
+plt.xlabel("x (meters)")
+plt.ylabel("y (meters)")
+plt.legend()
+plt.show()
+
 f, (ax1, ax2, ax3) = plt.subplots(1, 3)
 color = 'black'
 xdata = healthy_data[:,0]
