@@ -58,10 +58,10 @@ while not rospy.is_shutdown():
         healthy_fault_bicycle.createPath()
         healthy_fault_bicycle.driveOpenLoop(healthy_fault_condition, 'green')
 
-        for i in range(1):
-            healthy_residual_path_data = []
-            healthy_fault_bicycle.driveAlongPath(0, healthy_fault_bicycle.pid, None, 1, healthy_fault_condition)
-            healthy_residual_path_data = healthy_fault_bicycle.path_data.copy()
+        # for i in range(1):
+        #     healthy_residual_path_data = []
+        #     healthy_fault_bicycle.driveAlongPath(0, healthy_fault_bicycle.pid, None, 1, healthy_fault_condition)
+        #     healthy_residual_path_data = healthy_fault_bicycle.path_data.copy()
             # healthy_residual_path_data[:, 0:3] = healthy_residual_path_data[:, 0:3] - ideal_bicycle.path_data[:, 0:3]
             # f = open('/home/ace/catkin_ws/src/network_faults/data/path_data.csv', 'a')
             # np.savetxt(f, healthy_residual_path_data, delimiter=",")
@@ -71,10 +71,10 @@ while not rospy.is_shutdown():
         left_fault_bicycle.createPath()
         left_fault_bicycle.driveOpenLoop(left_fault_condition, 'red')
 
-        for j in range(1):
-            left_residual_path_data = []
-            left_fault_bicycle.driveAlongPath(0, left_fault_bicycle.pid, None, 1, left_fault_condition)
-            left_residual_path_data = left_fault_bicycle.path_data.copy()
+        # for j in range(1):
+        #     left_residual_path_data = []
+        #     left_fault_bicycle.driveAlongPath(0, left_fault_bicycle.pid, None, 1, left_fault_condition)
+        #     left_residual_path_data = left_fault_bicycle.path_data.copy()
             # left_residual_path_data[:, 0:3] = left_residual_path_data[:, 0:3] - ideal_bicycle.path_data[:, 0:3]
             # f = open('/home/ace/catkin_ws/src/network_faults/data/path_data.csv', 'a')
             # np.savetxt(f, left_residual_path_data, delimiter=",")
@@ -84,10 +84,10 @@ while not rospy.is_shutdown():
         right_fault_bicycle.createPath()
         right_fault_bicycle.driveOpenLoop(right_fault_condition, 'blue')
 
-        for k in range(1):
-            right_residual_path_data = []
-            right_fault_bicycle.driveAlongPath(0, right_fault_bicycle.pid, None, 1, right_fault_condition)
-            right_residual_path_data = right_fault_bicycle.path_data.copy()
+        # for k in range(1):
+        #     right_residual_path_data = []
+        #     right_fault_bicycle.driveAlongPath(0, right_fault_bicycle.pid, None, 1, right_fault_condition)
+        #     right_residual_path_data = right_fault_bicycle.path_data.copy()
             # right_residual_path_data[:, 0:3] = right_residual_path_data[:, 0:3] - ideal_bicycle.path_data[:, 0:3]
             # f = open('/home/ace/catkin_ws/src/network_faults/data/path_data.csv', 'a')
             # np.savetxt(f, right_residual_path_data, delimiter=",")
