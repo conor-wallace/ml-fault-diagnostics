@@ -96,7 +96,7 @@ def get_data(label):
         rate.sleep()
 
 if __name__ == '__main__':
-    label = 2
+    label = 4
     data, path = get_data(label)
 
     plt.scatter(path[:, 0], path[:, 1], color='blue')
