@@ -3,12 +3,13 @@ import csv
 import numpy as np
 import matplotlib.pyplot as plt
 from pid import PID
+import pandas as pd
 
 class Bicycle():
     def __init__(self, path):
         self.x = 0
         self.y = 0
-        self.theta = math.radians(45)
+        self.theta = math.radians(0)
         self.path = path
         self.desired_x = 0
         self.desired_y = 0
@@ -26,10 +27,11 @@ class Bicycle():
         self.astar_path = []
         self.path_data = []
         self.prev_noise = 0.0
-        self.noise_functions = np.array([[5.0, 0.02858067, -4.99487687],
-                                         [1.13284976, 0.22663204, -1.13644619],
-                                         [-0.19161766, 0.44401223, 0.19953161],
-                                         [0.0, 0.0, 0.0]])
+        self.noise_distribution = None
+        self.noise_a = 0.0
+        self.noise_b = 0.0
+        self.noise_c = 0.0
+        self.white_noise = 0.0
 
     def createPath(self):
         C = np.zeros((40, 40))
@@ -57,8 +59,6 @@ class Bicycle():
                 #     print(coordinate)
                 #     C[i, j] = 10
                 #     path_count -= 1
-        scale = float(3.0)/float(35.0)
-        C = C*scale
         plt.imshow(C, cmap='Greys')
         plt.gca().invert_yaxis()
         plt.ylabel("y (meters)")
@@ -66,30 +66,28 @@ class Bicycle():
         plt.title("A* Optimal Path")
         x = self.path
         x = np.flip(x,0)
-        print(x)
-        x = x*scale
         plt.plot(x[:,0], x[:,1], 'o')
         for i in range(1,x.shape[0]):
             if x[i, 0]-x[i-1, 0] == 0.0:
                 x_data = np.repeat(x[i,0], self.iter)
                 y_data = np.linspace(start=x[i-1,1],stop=x[i,1], num=self.iter)
-                print(x_data)
-                print(y_data)
+                #print(x_data)
+                #print(y_data)
                 plt.plot(x_data,y_data, '-x')
             else:
                 a = (x[i, 1] - x[i-1, 1])/(x[i, 0]-x[i-1, 0])
                 b = x[i, 1]-a*x[i, 0]
-                print(a)
-                print(b)
+                #print(a)
+                #print(b)
                 x_data = np.linspace(start=x[i-1,0],stop=x[i,0], num=self.iter)
                 y_data = list(map(lambda v : v * a + b, x_data))
-                print(x_data)
-                print(y_data)
+                #print(x_data)
+                #print(y_data)
                 plt.plot(x_data,y_data, '-x')
             data = np.array(zip(x_data,y_data))
-            print(data)
-            print(data.shape)
-            print(self.desired_path.shape)
+            #print(data)
+            #print(data.shape)
+            #print(self.desired_path.shape)
             self.desired_path[i*self.iter:i*self.iter+self.iter,:] = data
         scale = float(3.0)/float(35.0)
         self.path = self.path*scale
@@ -104,14 +102,44 @@ class Bicycle():
         thetas = np.reshape(thetas, (-1, 1))
 
         self.desired_path = np.concatenate((self.desired_path, thetas), axis=1)
-        print(self.desired_path)
+        #print(self.desired_path)
         plt.plot(self.desired_path[:,0], self.desired_path[:,1],color='blue')
         plt.show()
 
+    def readNoiseFunction(self):
+        path = "../data/distributions.csv"
+        df = pd.read_csv(path)
+        dataset = df[['%mean1','%mean2','%mean3','%var1','%var2','%var3']]
+        dataset = dataset.to_numpy()
+
+        dataset = np.concatenate([np.reshape(np.zeros(dataset.shape[1]), (1, -1)), dataset])
+        print(dataset)
+
+        self.noise_distribution = dataset
+
+    def setNoiseFunction(self, fault):
+        a_mu = self.noise_distribution[fault, 0]
+        b_mu = self.noise_distribution[fault, 1]
+        c_mu = self.noise_distribution[fault, 2]
+        a_sigma = self.noise_distribution[fault, 3]
+        b_sigma = self.noise_distribution[fault, 4]
+        c_sigma = self.noise_distribution[fault, 5]
+
+        print(self.noise_distribution[fault, :])
+
+        self.noise_a = np.random.normal(a_mu, a_sigma**2, 1)
+        self.noise_b = np.random.normal(b_mu, b_sigma**2, 1)
+        self.noise_c = np.random.normal(c_mu, c_sigma**2, 1)
+
+        print(self.noise_a, self.noise_b, self.noise_c)
+
+        if fault != 0:
+            self.white_noise = 0.01
+
     def computeNoiseFunction(self, fault):
         # fault_noise = self.noise_functions[fault, 0] / (1 + np.exp(-self.noise_functions[fault, 1] * (self.x + self.noise_functions[fault, 2])))
-        fault_noise = self.noise_functions[fault, 0] * np.exp(self.noise_functions[fault, 1] * self.x) + self.noise_functions[fault, 2]
-        white_noise = np.random.normal(0, 0.0)
+        fault_noise = self.noise_a * np.exp(self.noise_b * self.x) + self.noise_c
+        white_noise = np.random.normal(0, self.white_noise)
 
         return fault_noise + white_noise
 
@@ -119,7 +147,7 @@ class Bicycle():
         self.x = np.clip(self.x, -1e5, 1e5)
         self.x = np.float128(self.x)
 
-        if fault == 3:
+        if fault == 0:
             # ideal dynamics
             yaw_dot = ((v/self.L)*(math.tan(gamma)))*dt
             x_dot = (v * math.cos(self.theta))*dt
@@ -130,7 +158,7 @@ class Bicycle():
             noise = self.computeNoiseFunction(fault)
             yaw_dot = ((v/self.L)*(math.tan(gamma)))*dt
             x_dot = (v * math.cos(self.theta))*dt
-            y_dot = (v * math.sin(self.theta))*dt + (noise-self.prev_noise)
+            y_dot = (v * math.sin(self.theta))*dt + (noise)*dt
 
             self.prev_noise = noise
 
@@ -190,11 +218,11 @@ class Bicycle():
 
         while(i != self.max_iter):
             self.path_data.append([self.x, self.y])
-            self.dynamics(0.6, 0.0, fault, 0.1)
+            self.dynamics(0.4, 0.0, fault, 0.1)
             i += 1
 
         path = np.asarray(self.path_data)
-        print(path.shape)
+        #print(path.shape)
         plt.scatter(path[:, 0], path[:, 1], color=color)
         plt.xlabel("x (meters)")
         plt.ylabel("y (meters)")

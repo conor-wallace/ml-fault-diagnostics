@@ -48,56 +48,74 @@ while not rospy.is_shutdown():
         # print(path)
         # f = open('/home/ace/catkin_ws/src/network_faults/data/path.csv', 'w')
         # np.savetxt(f, path, delimiter=",")
-        ideal_condition = 3
+        ideal_condition = 0
         ideal_bicycle = Bicycle(path)
         ideal_bicycle.createPath()
         ideal_bicycle.driveAlongPath(0, ideal_bicycle.pid, None, 1, ideal_condition)
 
-        healthy_fault_condition = 0
+        healthy_fault_condition = 1
         healthy_fault_bicycle = Bicycle(path)
         healthy_fault_bicycle.createPath()
+        healthy_fault_bicycle.readNoiseFunction()
+        healthy_fault_bicycle.setNoiseFunction(healthy_fault_condition)
         healthy_fault_bicycle.driveOpenLoop(healthy_fault_condition, 'green')
 
-        # for i in range(1):
-        #     healthy_residual_path_data = []
-        #     healthy_fault_bicycle.driveAlongPath(0, healthy_fault_bicycle.pid, None, 1, healthy_fault_condition)
-        #     healthy_residual_path_data = healthy_fault_bicycle.path_data.copy()
+        for i in range(1):
+            healthy_residual_path_data = []
+            healthy_fault_bicycle.driveAlongPath(0, healthy_fault_bicycle.pid, None, 1, healthy_fault_condition)
+            # healthy_residual_path_data = healthy_fault_bicycle.path_data.copy()
             # healthy_residual_path_data[:, 0:3] = healthy_residual_path_data[:, 0:3] - ideal_bicycle.path_data[:, 0:3]
             # f = open('/home/ace/catkin_ws/src/network_faults/data/path_data.csv', 'a')
             # np.savetxt(f, healthy_residual_path_data, delimiter=",")
+            healthy_ga = GA(100, 500, healthy_fault_bicycle, healthy_fault_condition)
+            healthy_ga.setup()
+            healthy_optimal_k = healthy_ga.evolve()
+            healthy_optimal_k = list(healthy_optimal_k)
+            pid_msg.gain = healthy_optimal_k
+            print(healthy_optimal_k)
 
-        left_fault_condition = 1
+        left_fault_condition = 2
         left_fault_bicycle = Bicycle(path)
         left_fault_bicycle.createPath()
+        left_fault_bicycle.readNoiseFunction()
+        left_fault_bicycle.setNoiseFunction(left_fault_condition)
         left_fault_bicycle.driveOpenLoop(left_fault_condition, 'red')
 
-        # for j in range(1):
-        #     left_residual_path_data = []
-        #     left_fault_bicycle.driveAlongPath(0, left_fault_bicycle.pid, None, 1, left_fault_condition)
+        for j in range(1):
+            left_residual_path_data = []
+            left_fault_bicycle.driveAlongPath(0, left_fault_bicycle.pid, None, 1, left_fault_condition)
         #     left_residual_path_data = left_fault_bicycle.path_data.copy()
             # left_residual_path_data[:, 0:3] = left_residual_path_data[:, 0:3] - ideal_bicycle.path_data[:, 0:3]
             # f = open('/home/ace/catkin_ws/src/network_faults/data/path_data.csv', 'a')
             # np.savetxt(f, left_residual_path_data, delimiter=",")
+            left_ga = GA(100, 500, left_fault_bicycle, left_fault_condition)
+            left_ga.setup()
+            left_optimal_k = left_ga.evolve()
+            left_optimal_k = list(left_optimal_k)
+            pid_msg.gain = left_optimal_k
+            print(left_optimal_k)
 
-        right_fault_condition = 2
+        right_fault_condition = 3
         right_fault_bicycle = Bicycle(path)
         right_fault_bicycle.createPath()
+        right_fault_bicycle.readNoiseFunction()
+        right_fault_bicycle.setNoiseFunction(right_fault_condition)
         right_fault_bicycle.driveOpenLoop(right_fault_condition, 'blue')
 
-        # for k in range(1):
-        #     right_residual_path_data = []
-        #     right_fault_bicycle.driveAlongPath(0, right_fault_bicycle.pid, None, 1, right_fault_condition)
+        for k in range(1):
+            right_residual_path_data = []
+            right_fault_bicycle.driveAlongPath(0, right_fault_bicycle.pid, None, 1, right_fault_condition)
         #     right_residual_path_data = right_fault_bicycle.path_data.copy()
             # right_residual_path_data[:, 0:3] = right_residual_path_data[:, 0:3] - ideal_bicycle.path_data[:, 0:3]
             # f = open('/home/ace/catkin_ws/src/network_faults/data/path_data.csv', 'a')
             # np.savetxt(f, right_residual_path_data, delimiter=",")
+            right_ga = GA(100, 500, right_fault_bicycle, right_fault_condition)
+            right_ga.setup()
+            right_optimal_k = right_ga.evolve()
+            right_optimal_k = list(right_optimal_k)
+            pid_msg.gain = right_optimal_k
+            print(right_optimal_k)
 
-        # ga = GA(100, 500, faulty_bicycle, fault_condition)
-        # ga.setup()
-        # optimal_k = ga.evolve()
-        # optimal_k = list(optimal_k)
-        # pid_msg.gain = optimal_k
-        # print(optimal_k)
         #
         # dict_file = dict(Matrix=np.array(optimal_k))
         #
