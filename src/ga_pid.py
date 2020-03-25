@@ -32,12 +32,12 @@ class GA():
     def setup(self):
         for i in range(self.population_size):
             k = np.empty((self.chromosome_size))
-            k[0] = np.random.uniform(low=0, high=1.0)
-            k[1] = np.random.uniform(low=0, high=0.1)
-            k[2] = np.random.uniform(low=0, high=0.01)
-            k[3] = np.random.uniform(low=0, high=1.0)
-            k[4] = np.random.uniform(low=0, high=0.1)
-            k[5] = np.random.uniform(low=0, high=0.01)
+            k[0] = np.random.uniform(low=0, high=self.mu[0])
+            k[1] = np.random.uniform(low=0, high=self.mu[1])
+            k[2] = np.random.uniform(low=0, high=self.mu[2])
+            k[3] = np.random.uniform(low=0, high=self.mu[3])
+            k[4] = np.random.uniform(low=0, high=self.mu[4])
+            k[5] = np.random.uniform(low=0, high=self.mu[5])
             pid = PID(k)
 
             self.population[i] = pid
@@ -51,6 +51,7 @@ class GA():
             self.fitness()
             print("select parents")
             parents = self.selection()
+            print(parents.shape)
             self.mu = self.fittest.k
             print(str(float(1.0/self.generations)))
             print(str(float(self.generations - k)))
@@ -121,11 +122,6 @@ class GA():
     def selection(self):
         print("\n")
         print("unsorted parents")
-        parents = self.population[0:self.number_parents]
-        fitness = []
-        for parent in parents:
-            fitness.append(parent.fitness)
-            print(parent.fitness)
         self.quickSort(self.population, 0, self.population.shape[0]-1)
         print("\n")
         print("fittest parents")
@@ -158,17 +154,15 @@ class GA():
         return parents
 
     def crossover(self, parents):
-        print(self.number_parents)
         new_population = parents
         new_population = np.reshape(new_population, [self.number_parents, 1])
-        print(new_population.shape)
 
         for i in range(self.number_parents):
             for j in range(i+1, self.number_parents):
                 parent1 = parents[i].k
                 parent2 = parents[j].k
-                offspring1 = [parent1[0], parent1[1], parent1[2], parent2[3], parent2[4], parent2[5]]
-                offspring2 = [parent2[0], parent2[1], parent2[2], parent1[3], parent1[4], parent1[5]]
+                offspring1 = [parent1[0, 0], parent1[0, 1], parent1[0, 2], parent2[0, 3], parent2[0, 4], parent2[0, 5]]
+                offspring2 = [parent2[0, 0], parent2[0, 1], parent2[0, 2], parent1[0, 3], parent1[0, 4], parent1[0, 5]]
                 offspring1 = np.array(offspring1)
                 offspring2 = np.array(offspring2)
                 offspring1_pid = PID(offspring1)
@@ -179,25 +173,23 @@ class GA():
 
                 new_population = np.concatenate((new_population, new_offspring), axis=0)
 
-        print(new_population.shape[0])
         for i in range(self.population.shape[0]):
             self.population[i].k = new_population[i,0].k
 
     def mutation(self):
-        print("build mutation")
         for i in range(self.number_parents, self.population.shape[0]):
             if np.random.uniform(0,1) < self.mutation_rate:
-                self.population[i].k[0] = math.fabs(np.random.normal(self.mu[0], self.sigma[0]))
+                self.population[i].k[0, 0] = math.fabs(np.random.normal(self.mu[0, 0], self.sigma[0]))
             if np.random.uniform(0,1) < self.mutation_rate:
-                self.population[i].k[1] = math.fabs(np.random.normal(self.mu[1], self.sigma[1]))
+                self.population[i].k[0, 1] = math.fabs(np.random.normal(self.mu[0, 1], self.sigma[1]))
             if np.random.uniform(0,1) < self.mutation_rate:
-                self.population[i].k[2] = math.fabs(np.random.normal(self.mu[2], self.sigma[2]))
+                self.population[i].k[0, 2] = math.fabs(np.random.normal(self.mu[0, 2], self.sigma[2]))
             if np.random.uniform(0,1) < self.mutation_rate:
-                self.population[i].k[3] = math.fabs(np.random.normal(self.mu[3], self.sigma[3]))
+                self.population[i].k[0, 3] = math.fabs(np.random.normal(self.mu[0, 3], self.sigma[3]))
             if np.random.uniform(0,1) < self.mutation_rate:
-                self.population[i].k[4] = math.fabs(np.random.normal(self.mu[4], self.sigma[4]))
+                self.population[i].k[0, 4] = math.fabs(np.random.normal(self.mu[0, 4], self.sigma[4]))
             if np.random.uniform(0,1) < self.mutation_rate:
-                self.population[i].k[5] = math.fabs(np.random.normal(self.mu[5], self.sigma[5]))
+                self.population[i].k[0, 5] = math.fabs(np.random.normal(self.mu[0, 5], self.sigma[5]))
 
 
     def quickSort(self, x, start, end):
