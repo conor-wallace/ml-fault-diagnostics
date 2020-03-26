@@ -26,7 +26,7 @@ class GA():
         self.last_norm = 100000.0
         self.fit_plot = []
         self.fault = fault
-        self.mu = np.array([10.0, 1.0, 0.1, 20.0, 1.0, 0.1])
+        self.mu = np.array([10.0, 10.0, 10.0, 10.0, 10.0, 10.0])
         self.sigma = np.array([3.0, 3.0, 3.0, 3.0, 3.0, 3.0])
 
     def setup(self):
@@ -57,7 +57,7 @@ class GA():
             print(str(float(self.generations - k)))
             rate = (float(1.0/self.generations)*float(self.generations - k))
             print("Mutation Rate: %s" % rate)
-            self.sigma = (3 * rate)*np.ones(6)
+            self.sigma = (3.0)*np.ones(6)
             print("New mu")
             print(self.mu)
             print("New sigma")
@@ -178,7 +178,7 @@ class GA():
 
     def mutation(self):
         for i in range(self.number_parents, self.population.shape[0]):
-            if np.random.uniform(0,1) < self.mutation_rate:
+            if np.random.uniform(0,1) < 0.95:
                 self.population[i].k[0, 0] = math.fabs(np.random.normal(self.mu[0, 0], self.sigma[0]))
             if np.random.uniform(0,1) < self.mutation_rate:
                 self.population[i].k[0, 1] = math.fabs(np.random.normal(self.mu[0, 1], self.sigma[1]))

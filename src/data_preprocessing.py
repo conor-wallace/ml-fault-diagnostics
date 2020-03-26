@@ -124,8 +124,33 @@ def processData(path):
     f = open('/home/conor/catkin_ws/src/network_faults/data/noise_functions.csv', 'a')
     np.savetxt(f, noise_functions, delimiter=",")
 
-def func(x, a, b, c):
-    return a*np.exp(b*x)+c
+def dynamics(x, y, theta, v, gamma, dt):
+    yaw_dot = ((v/0.19)*(math.tan(gamma)))*dt
+    x_dot = (v * math.cos(theta))*dt
+    y_dot = (v * math.sin(theta))*dt
+
+    theta = theta + yaw_dot
+    x = x + x_dot
+    y = y + y_dot
+
+    return x, y, theta
+
+def driveOpenLoop(gamma, max_iter):
+    y_data = []
+    i = 0
+    x, y, theta = 0.0, 0.0, math.radians(0.0)
+
+    while(i != max_iter):
+        y_data.append(y)
+        x, y, theta = dynamics(x, y, theta, 0.4, gamma, 0.1)
+        i += 1
+
+    return np.asarray(y_data)
+
+def func(x, gamma):
+    y = driveOpenLoop(gamma, x.shape[0])
+
+    return y
 
 def norm(x, x_hat):
     norm_vector = np.empty((x.shape[0], 1))
@@ -154,9 +179,9 @@ def cleanData(data, eta):
     run_norm = 100.0
     x = data
     iteration = 0
-    max_iter = 20
-    upper_bounds = np.array([20, 1.0, 20])
-    lower_bounds = np.array([-20, -1.0, -20])
+    max_iter = 1
+    upper_bounds = np.array([math.radians(90)])
+    lower_bounds = np.array([-math.radians(90)])
     range = 1.0
     count = 0.0
     run_opt, run_cov = curve_fit(func, x[:, 2], x[:, 3], bounds=(lower_bounds, upper_bounds))
@@ -224,7 +249,7 @@ def cleanData(data, eta):
         range = 1.0
         count += 1
 
-        # plt.show()
+        plt.show()
 
     return run_opt
 

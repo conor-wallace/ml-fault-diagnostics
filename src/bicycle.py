@@ -16,7 +16,7 @@ class Bicycle():
         self.desired_theta = 0
         self.heading_error = 0.0
         self.distance_error = 100000.0
-        self.k = [4.77513214e-01, 7.21466250e-03, 2.71819786e+01, 3.72521390e+00, 2.31961582e+00, 1.64713994e+01]
+        self.k = [0.5, 0.01, 0.01, 1.0, 0.01, 0.01]
         self.max_rad = 38.0
         self.max_vel = 1.0
         self.max_iter = 45
@@ -28,9 +28,7 @@ class Bicycle():
         self.path_data = []
         self.prev_noise = 0.0
         self.noise_distribution = None
-        self.noise_a = 0.0
-        self.noise_b = 0.0
-        self.noise_c = 0.0
+        self.noise_gamma = 0.0
         self.white_noise = 0.0
 
     def createPath(self):
@@ -107,9 +105,9 @@ class Bicycle():
         plt.show()
 
     def readNoiseFunction(self):
-        path = "../data/distributions.csv"
+        path = "/home/conor/catkin_ws/src/network_faults/data/distributions.csv"
         df = pd.read_csv(path)
-        dataset = df[['%mean1','%mean2','%mean3','%var1','%var2','%var3']]
+        dataset = df[['%mean','%var']]
         dataset = dataset.to_numpy()
 
         dataset = np.concatenate([np.reshape(np.zeros(dataset.shape[1]), (1, -1)), dataset])
@@ -118,30 +116,17 @@ class Bicycle():
         self.noise_distribution = dataset
 
     def setNoiseFunction(self, fault):
-        a_mu = self.noise_distribution[fault, 0]
-        b_mu = self.noise_distribution[fault, 1]
-        c_mu = self.noise_distribution[fault, 2]
-        a_sigma = self.noise_distribution[fault, 3]
-        b_sigma = self.noise_distribution[fault, 4]
-        c_sigma = self.noise_distribution[fault, 5]
+        gamma_mu = self.noise_distribution[fault, 0]
+        gamma_sigma = self.noise_distribution[fault, 1]
 
         print(self.noise_distribution[fault, :])
 
-        self.noise_a = np.random.normal(a_mu, a_sigma**2, 1)
-        self.noise_b = np.random.normal(b_mu, b_sigma**2, 1)
-        self.noise_c = np.random.normal(c_mu, c_sigma**2, 1)
+        self.noise_gamma = np.random.normal(gamma_mu*30, gamma_sigma**2, 1)
 
-        print(self.noise_a, self.noise_b, self.noise_c)
+        print(self.noise_gamma)
 
         if fault != 0:
-            self.white_noise = 0.01
-
-    def computeNoiseFunction(self, fault):
-        # fault_noise = self.noise_functions[fault, 0] / (1 + np.exp(-self.noise_functions[fault, 1] * (self.x + self.noise_functions[fault, 2])))
-        fault_noise = self.noise_a * np.exp(self.noise_b * self.x) + self.noise_c
-        white_noise = np.random.normal(0, self.white_noise)
-
-        return fault_noise + white_noise
+            self.white_noise = 0.0
 
     def dynamics(self, v, gamma, fault, dt):
         self.x = np.clip(self.x, -1e5, 1e5)
@@ -155,12 +140,10 @@ class Bicycle():
 
         else:
             # fault dynamics
-            noise = self.computeNoiseFunction(fault)
-            yaw_dot = ((v/self.L)*(math.tan(gamma)))*dt
+            noise_gamma = gamma + self.noise_gamma + np.random.normal(0, self.white_noise)
+            yaw_dot = ((v/self.L)*(math.tan(noise_gamma)))*dt
             x_dot = (v * math.cos(self.theta))*dt
-            y_dot = (v * math.sin(self.theta))*dt + (noise)*dt
-
-            self.prev_noise = noise
+            y_dot = (v * math.sin(self.theta))*dt
 
         # yaw_dot = np.clip(yaw_dot, -math.radians(45), math.radians(45))
         # x_dot = np.clip(x_dot, -0.1, 0.1)

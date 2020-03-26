@@ -53,6 +53,8 @@ while not rospy.is_shutdown():
         ideal_bicycle.createPath()
         ideal_bicycle.driveAlongPath(0, ideal_bicycle.pid, None, 1, ideal_condition)
 
+        generations = 1000
+
         healthy_fault_condition = 1
         healthy_fault_bicycle = Bicycle(path)
         healthy_fault_bicycle.createPath()
@@ -63,16 +65,23 @@ while not rospy.is_shutdown():
         for i in range(1):
             healthy_residual_path_data = []
             healthy_fault_bicycle.driveAlongPath(0, healthy_fault_bicycle.pid, None, 1, healthy_fault_condition)
-            # healthy_residual_path_data = healthy_fault_bicycle.path_data.copy()
-            # healthy_residual_path_data[:, 0:3] = healthy_residual_path_data[:, 0:3] - ideal_bicycle.path_data[:, 0:3]
-            # f = open('/home/ace/catkin_ws/src/network_faults/data/path_data.csv', 'a')
-            # np.savetxt(f, healthy_residual_path_data, delimiter=",")
-            healthy_ga = GA(100, 500, healthy_fault_bicycle, healthy_fault_condition)
+            healthy_residual_path_data = healthy_fault_bicycle.path_data.copy()
+            healthy_residual_path_data[:, 0:3] = healthy_residual_path_data[:, 0:3] - ideal_bicycle.path_data[:, 0:3]
+
+            healthy_ga = GA(100, generations, healthy_fault_bicycle, healthy_fault_condition)
             healthy_ga.setup()
             healthy_optimal_k = healthy_ga.evolve()
             healthy_optimal_k = list(healthy_optimal_k)
             pid_msg.gain = healthy_optimal_k
             print(healthy_optimal_k)
+            healthy_residual_path_data_opt = healthy_fault_bicycle.path_data.copy()
+            healthy_residual_path_data_opt[:, 0:3] = healthy_residual_path_data_opt[:, 0:3] - ideal_bicycle.path_data[:, 0:3]
+            plt.plot(healthy_residual_path_data[:, 5], healthy_residual_path_data[:, 2], color='red', label='Healthy theta response')
+            plt.plot(healthy_residual_path_data_opt[:, 5], healthy_residual_path_data_opt[:, 2], color='blue', label='Healthy theta response optimized')
+            plt.xlabel('time')
+            plt.ylabel('residual (rad)')
+            plt.legend()
+            plt.show()
 
         left_fault_condition = 2
         left_fault_bicycle = Bicycle(path)
@@ -84,16 +93,22 @@ while not rospy.is_shutdown():
         for j in range(1):
             left_residual_path_data = []
             left_fault_bicycle.driveAlongPath(0, left_fault_bicycle.pid, None, 1, left_fault_condition)
-        #     left_residual_path_data = left_fault_bicycle.path_data.copy()
-            # left_residual_path_data[:, 0:3] = left_residual_path_data[:, 0:3] - ideal_bicycle.path_data[:, 0:3]
-            # f = open('/home/ace/catkin_ws/src/network_faults/data/path_data.csv', 'a')
-            # np.savetxt(f, left_residual_path_data, delimiter=",")
-            left_ga = GA(100, 500, left_fault_bicycle, left_fault_condition)
+            left_residual_path_data = left_fault_bicycle.path_data.copy()
+            left_residual_path_data[:, 0:3] = left_residual_path_data[:, 0:3] - ideal_bicycle.path_data[:, 0:3]
+            left_ga = GA(100, generations, left_fault_bicycle, left_fault_condition)
             left_ga.setup()
             left_optimal_k = left_ga.evolve()
             left_optimal_k = list(left_optimal_k)
             pid_msg.gain = left_optimal_k
             print(left_optimal_k)
+            left_residual_path_data_opt = left_fault_bicycle.path_data.copy()
+            left_residual_path_data_opt[:, 0:3] = left_residual_path_data_opt[:, 0:3] - ideal_bicycle.path_data[:, 0:3]
+            plt.plot(left_residual_path_data[:, 5], left_residual_path_data[:, 2], color='red', label='Left fault theta response')
+            plt.plot(left_residual_path_data_opt[:, 5], left_residual_path_data_opt[:, 2], color='blue', label='Left fault theta response optimized')
+            plt.xlabel('time')
+            plt.ylabel('residual (rad)')
+            plt.legend()
+            plt.show()
 
         right_fault_condition = 3
         right_fault_bicycle = Bicycle(path)
@@ -105,16 +120,22 @@ while not rospy.is_shutdown():
         for k in range(1):
             right_residual_path_data = []
             right_fault_bicycle.driveAlongPath(0, right_fault_bicycle.pid, None, 1, right_fault_condition)
-        #     right_residual_path_data = right_fault_bicycle.path_data.copy()
-            # right_residual_path_data[:, 0:3] = right_residual_path_data[:, 0:3] - ideal_bicycle.path_data[:, 0:3]
-            # f = open('/home/ace/catkin_ws/src/network_faults/data/path_data.csv', 'a')
-            # np.savetxt(f, right_residual_path_data, delimiter=",")
-            right_ga = GA(100, 500, right_fault_bicycle, right_fault_condition)
+            right_residual_path_data = right_fault_bicycle.path_data.copy()
+            right_residual_path_data[:, 0:3] = right_residual_path_data[:, 0:3] - ideal_bicycle.path_data[:, 0:3]
+            right_ga = GA(100, generations, right_fault_bicycle, right_fault_condition)
             right_ga.setup()
             right_optimal_k = right_ga.evolve()
             right_optimal_k = list(right_optimal_k)
             pid_msg.gain = right_optimal_k
             print(right_optimal_k)
+            right_residual_path_data_opt = right_fault_bicycle.path_data.copy()
+            right_residual_path_data_opt[:, 0:3] = right_residual_path_data_opt[:, 0:3] - ideal_bicycle.path_data[:, 0:3]
+            plt.plot(right_residual_path_data[:, 5], right_residual_path_data[:, 2], color='red', label='Right fault theta response')
+            plt.plot(right_residual_path_data_opt[:, 5], right_residual_path_data_opt[:, 2], color='blue', label='Right fault theta response optimized')
+            plt.xlabel('time')
+            plt.ylabel('residual (rad)')
+            plt.legend()
+            plt.show()
 
         #
         # dict_file = dict(Matrix=np.array(optimal_k))
