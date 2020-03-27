@@ -53,7 +53,7 @@ while not rospy.is_shutdown():
         ideal_bicycle.createPath()
         ideal_bicycle.driveAlongPath(0, ideal_bicycle.pid, None, 1, ideal_condition)
 
-        generations = 1000
+        generations = 100
 
         healthy_fault_condition = 1
         healthy_fault_bicycle = Bicycle(path)
@@ -65,8 +65,8 @@ while not rospy.is_shutdown():
         for i in range(1):
             healthy_residual_path_data = []
             healthy_fault_bicycle.driveAlongPath(0, healthy_fault_bicycle.pid, None, 1, healthy_fault_condition)
-            healthy_residual_path_data = healthy_fault_bicycle.path_data.copy()
-            healthy_residual_path_data[:, 0:3] = healthy_residual_path_data[:, 0:3] - ideal_bicycle.path_data[:, 0:3]
+            healthy_residual_path_data = healthy_fault_bicycle.astar_path.copy()
+            healthy_residual_path_data = healthy_fault_bicycle.desired_path[20:, :] - healthy_residual_path_data
 
             healthy_ga = GA(100, generations, healthy_fault_bicycle, healthy_fault_condition)
             healthy_ga.setup()
@@ -74,10 +74,10 @@ while not rospy.is_shutdown():
             healthy_optimal_k = list(healthy_optimal_k)
             pid_msg.gain = healthy_optimal_k
             print(healthy_optimal_k)
-            healthy_residual_path_data_opt = healthy_fault_bicycle.path_data.copy()
-            healthy_residual_path_data_opt[:, 0:3] = healthy_residual_path_data_opt[:, 0:3] - ideal_bicycle.path_data[:, 0:3]
-            plt.plot(healthy_residual_path_data[:, 5], healthy_residual_path_data[:, 2], color='red', label='Healthy theta response')
-            plt.plot(healthy_residual_path_data_opt[:, 5], healthy_residual_path_data_opt[:, 2], color='blue', label='Healthy theta response optimized')
+            healthy_residual_path_data_opt = healthy_fault_bicycle.astar_path.copy()
+            healthy_residual_path_data_opt = healthy_fault_bicycle.desired_path[20:, :] - healthy_residual_path_data_opt
+            plt.plot(np.arange(healthy_residual_path_data.shape[0]), healthy_residual_path_data[:, 0], color='red', label='Healthy theta response')
+            plt.plot(np.arange(healthy_residual_path_data.shape[0]), healthy_residual_path_data_opt[:, 0], color='blue', label='Healthy theta response optimized')
             plt.xlabel('time')
             plt.ylabel('residual (rad)')
             plt.legend()

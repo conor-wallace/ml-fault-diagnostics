@@ -16,7 +16,7 @@ class Bicycle():
         self.desired_theta = 0
         self.heading_error = 0.0
         self.distance_error = 100000.0
-        self.k = [0.5, 0.01, 0.01, 1.0, 0.01, 0.01]
+        self.k = [0.5, 0.0, 0.0, 1.0, 0.0, 0.0]
         self.max_rad = 38.0
         self.max_vel = 1.0
         self.max_iter = 45
@@ -227,6 +227,8 @@ class Bicycle():
         self.path_data = []
         self.astar_path = []
         count = 0
+        colors = np.array(['orange', '#91bfdb', '#FFC39D', '#99d594'])
+        labels = np.array(['Ideal UGV', 'Healthy UGV', 'Left Fault UGV', 'Right Fault UGV'])
 
         while i >= 0:
             target = self.path[i, :]
@@ -257,10 +259,11 @@ class Bicycle():
             self.path_data = np.asarray(self.path_data)
             self.astar_path = np.asarray(self.astar_path)
             plt.figure(figsize = (7,7))
-            plt.plot(self.astar_path[:, 0], self.astar_path[:, 1], color='orange', linewidth=2)
-            plt.plot(self.path[:,0], self.path[:,1], color='blue', linestyle=':', linewidth=4)
-            plt.xlabel('x')
-            plt.ylabel('y')
+            plt.plot(self.path[:,0], self.path[:,1], color='black', linewidth=4, label='Desired Path')
+            plt.plot(self.astar_path[:, 0], self.astar_path[:, 1], color=colors[fault], linestyle='-.', linewidth=4, label=labels[fault])
+            plt.xlabel('x (m)')
+            plt.ylabel('y (m)')
+            plt.legend()
             plt.title('UGV Path')
             plt.show()
 

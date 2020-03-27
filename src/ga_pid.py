@@ -26,7 +26,7 @@ class GA():
         self.last_norm = 100000.0
         self.fit_plot = []
         self.fault = fault
-        self.mu = np.array([10.0, 10.0, 10.0, 10.0, 10.0, 10.0])
+        self.mu = np.array([20.0, 20.0, 20.0, 20.0, 20.0, 20.0])
         self.sigma = np.array([3.0, 3.0, 3.0, 3.0, 3.0, 3.0])
 
     def setup(self):
@@ -57,7 +57,7 @@ class GA():
             print(str(float(self.generations - k)))
             rate = (float(1.0/self.generations)*float(self.generations - k))
             print("Mutation Rate: %s" % rate)
-            self.sigma = (3.0)*np.ones(6)
+            self.sigma = (3.0*rate)*np.ones(6)
             print("New mu")
             print(self.mu)
             print("New sigma")
@@ -69,15 +69,18 @@ class GA():
             i = i - 1
             k += 1
 
+        colors = np.array(['orange', '#91bfdb', '#FFC39D', '#99d594'])
+        labels = np.array(['Ideal UGV', 'Healthy UGV', 'Left Fault UGV', 'Right Fault UGV'])
         print("done evolving")
         return_dict = [0]
         self.fit_plot = np.array(self.fit_plot)
         t = np.arange(self.fit_plot.shape[0])
         plt.figure(figsize = (7,7))
-        plt.plot(t, self.fit_plot, color='blue', linewidth=2)
-        plt.xlim((0,25))
+        plt.plot(t, self.fit_plot, color=colors[self.fault], linewidth=2, label=labels[self.fault])
+        plt.xlim((0,self.generations))
         plt.xlabel('generations')
         plt.ylabel('loss')
+        plt.legend()
         plt.title('Genetic Algorithm Convergence')
         plt.show()
         print(self.fittest.k)

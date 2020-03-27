@@ -7,8 +7,9 @@ import pandas as pd
 import tensorflow as tf
 from keras import optimizers, Sequential
 from keras.models import Model
+from keras.callbacks import ModelCheckpoint
 from keras.utils import plot_model
-from keras.layers import Dense, LSTM, Dropout, RepeatVector, TimeDistributed, Flatten, Input, ConvLSTM2D
+from keras.layers import Dense, CuDNNLSTM, Dropout
 from keras.layers.convolutional import Conv1D, MaxPooling1D, Conv2D, MaxPooling2D
 from keras.layers.merge import concatenate
 from keras.callbacks import ModelCheckpoint, TensorBoard
@@ -57,7 +58,7 @@ class FaultClassifier():
 
     def loadData(self, path):
         df = pd.read_csv(path)
-        dataset = df[['x', 'y', 'yaw', 'time', 'iteration', 'label']]
+        dataset = df[['%velocity','%steering','%x','%y','%theta','%iteration','%time','%label']]
         dataset = dataset.to_numpy()
         data = dataset[:, :-1]
         print(data.shape)
@@ -73,17 +74,44 @@ class FaultClassifier():
     def trainModel(self):
         # LSTM Model
         model = Sequential()
-        model.add(LSTM(128, activation='tanh', input_shape=(self.lookback, self.num_features)))
-        model.add(Dense(self.num_labels, activation='sigmoid'))
+        model.add(CuDNNLSTM(128, input_shape=(self.lookback,self.num_features), return_sequences=True))
+        model.add(Dropout(0.3))
+        model.add(CuDNNLSTM(128))
+        model.add(Dropout(0.3))
+        model.add(Dense(self.num_labels, activation='softmax'))
 
         model.compile(optimizer='Adam', loss='categorical_crossentropy', metrics=['accuracy'])
 
+        # checkpoint
+        filepath="/home/conor/catkin_ws/src/network_faults/data/weights.best.hdf5"
+        checkpoint = ModelCheckpoint(filepath, monitor='val_acc', verbose=1, save_best_only=True, mode='max')
+        callbacks_list = [checkpoint]
+
         # fit model
-        history = model.fit(x=self.train_x, y=self.train_y, epochs=self.num_epochs, batch_size=self.batch_size, verbose=1, validation_data=(self.test_x, self.test_y))
+        history = model.fit(self.train_x, self.train_y, validation_data=(self.test_x, self.test_y), epochs=self.num_epochs, batch_size=self.batch_size, callbacks=callbacks_list)
+
+        plot_model(model, to_file='model.png')
+
+        # summarize history for accuracy
+        plt.plot(history.history['acc'])
+        plt.plot(history.history['val_acc'])
+        plt.title('model accuracy')
+        plt.ylabel('accuracy')
+        plt.xlabel('epoch')
+        plt.legend(['train', 'test'], loc='upper left')
+        plt.show()
+        # summarize history for loss
+        plt.plot(history.history['loss'])
+        plt.plot(history.history['val_loss'])
+        plt.title('model loss')
+        plt.ylabel('loss')
+        plt.xlabel('epoch')
+        plt.legend(['train', 'test'], loc='upper left')
+        plt.show()
 
 if __name__ == '__main__':
-    path = '~/catkin_ws/src/network_faults/data/residual_data.csv'
-    predictor1 = FaultClassifier(num_features=5, num_labels=3, lookback=10, num_epochs=500, batch_size=16)
+    path = '/home/conor/catkin_ws/src/unity_controller/data/sim_data.csv'
+    predictor1 = FaultClassifier(num_features=7, num_labels=3, lookback=10, num_epochs=1000, batch_size=256)
     predictor1.loadData(path)
     predictor1.trainModel()
 
