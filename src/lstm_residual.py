@@ -111,7 +111,7 @@ class FaultClassifier():
 
 if __name__ == '__main__':
     path = '/home/conor/catkin_ws/src/unity_controller/data/sim_data.csv'
-    predictor1 = FaultClassifier(num_features=7, num_labels=3, lookback=10, num_epochs=1000, batch_size=256)
+    predictor1 = FaultClassifier(num_features=7, num_labels=3, lookback=10, num_epochs=1000, batch_size=512)
     predictor1.loadData(path)
     predictor1.trainModel()
 
