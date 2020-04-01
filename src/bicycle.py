@@ -140,7 +140,7 @@ class Bicycle():
 
         else:
             # fault dynamics
-            noise_gamma = gamma + self.noise_gamma + np.random.normal(0, self.white_noise)
+            noise_gamma = gamma + self.noise_gamma + np.random.normal(0, 0.01)
             yaw_dot = ((v/self.L)*(math.tan(noise_gamma)))*dt
             x_dot = (v * math.cos(self.theta))*dt
             y_dot = (v * math.sin(self.theta))*dt
@@ -244,7 +244,7 @@ class Bicycle():
                 # t_error.append([delta_theta])
                 # d_error.append([distance])
                 self.astar_path.append([self.x, self.y, self.theta])
-                self.path_data.append([self.x, self.y, self.theta, self.pid.velocity, self.pid.steering, count, fault])
+                self.path_data.append([self.x, self.y, self.theta, self.x, self.y, self.theta, delta_x, delta_y, self.heading_error, self.pid.velocity, self.pid.steering, count, fault])
                 count += 1
                 self.pid.calculatePID(self.distance_error, self.heading_error, 0.1)
                 self.dynamics(self.pid.velocity, self.pid.steering, fault, 0.1)
