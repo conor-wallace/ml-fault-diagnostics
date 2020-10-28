@@ -19,7 +19,7 @@ class Bicycle():
         self.k = [0.5, 0.0, 0.0, 1.0, 0.0, 0.0]
         self.max_rad = 38.0
         self.max_vel = 1.0
-        self.max_iter = 45
+        self.max_iter = 270
         self.L = 0.19
         self.iter = 20
         self.pid = PID(0)
@@ -130,7 +130,7 @@ class Bicycle():
 
     def dynamics(self, v, gamma, fault, dt):
         self.x = np.clip(self.x, -1e5, 1e5)
-        self.x = np.float128(self.x)
+        self.x = np.float64(self.x)
 
         if fault == 0:
             # ideal dynamics
@@ -201,7 +201,7 @@ class Bicycle():
 
         while(i != self.max_iter):
             self.path_data.append([self.x, self.y])
-            self.dynamics(0.4, 0.0, fault, 0.1)
+            self.dynamics(0.36, -0.00023410732856159566, fault, 0.02)
             i += 1
 
         path = np.asarray(self.path_data)

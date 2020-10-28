@@ -276,5 +276,5 @@ def computeDistribution(x):
     return healthy_distribution, left_distribution, right_distribution
 
 if __name__ == '__main__':
-    path = "~/catkin_ws/src/network_faults/data/lilbot_data.csv"
+    path = "C:/Users/conor/OneDrive/Documents/Projects/Fault Diagnostics/network_faults/data/noise_data.csv"
     processData(path)
