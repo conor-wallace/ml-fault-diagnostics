@@ -11,7 +11,7 @@ class PID():
         self.Integral_d = 0
         self.Integral_theta = 0
         self.d_max = 1.0
-        self.theta_max = math.radians(45)
+        self.theta_max = math.radians(38)
         self.fitness = 0
         self.fault = fault
 
@@ -21,8 +21,8 @@ class PID():
         self.Integral_theta = self.Integral_theta + heading
         self.Integral_theta = np.clip(self.Integral_theta, -1*self.theta_max, self.theta_max)
 
-        self.velocity = self.k[self.fault, 0]*distance + self.k[self.fault, 1]*self.Integral_d + self.k[self.fault, 2]*(distance - self.last_d)*dt
-        self.steering = self.k[self.fault, 3]*heading + self.k[self.fault, 4]*self.Integral_theta + self.k[self.fault, 5]*(heading - self.last_theta)*dt
+        self.velocity = self.k[0, 0]*distance + self.k[0, 1]*self.Integral_d + self.k[0, 2]*(distance - self.last_d)*dt
+        self.steering = self.k[0, 3]*heading + self.k[0, 4]*self.Integral_theta + self.k[0, 5]*(heading - self.last_theta)*dt
 
         self.velocity = np.clip(self.velocity, -self.d_max, self.d_max)
         self.steering = np.clip(self.steering, -self.theta_max, self.theta_max)
