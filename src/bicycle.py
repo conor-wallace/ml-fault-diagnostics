@@ -7,25 +7,22 @@ import pandas as pd
 
 class Bicycle():
     def __init__(self, phi=0.0):
-        self.x = 4.0
+        self.x = 0.0
         self.y = 0.0
-        self.theta = math.radians(90)
+        self.theta = math.radians(0)
         self.drift_angle = phi
         self.desired_x = 0
         self.desired_y = 0
-        self.desired_theta = 0
         self.heading_error = 0.0
         self.distance_error = 100000.0
-        self.distance = 0.01
-        self.k = [0.5, 0.0, 0.0, 1.0, 0.0, 0.0]
+        self.distance = 0.1
         self.T = 50.0
         self.max_rad = 38.0
         self.max_vel = 1.0
-        self.max_iter = 1200*16
+        self.max_iter = 1200*8
         self.L = 0.19
-        self.iter = 20
-        self.pid = PID(0)
-        self.path_data = [[self.x, self.y, self.theta]]
+        self.pid = PID()
+        self.path_data = []
 
     def dynamics(self, v, gamma, dt):
         self.x = np.clip(self.x, -1e5, 1e5)
@@ -39,7 +36,7 @@ class Bicycle():
 
         else:
             # fault dynamics
-            noise_gamma = gamma + self.drift_angle + np.random.normal(0, 0.01)
+            noise_gamma = gamma + self.drift_angle + np.random.normal(0, 0.0125)
             yaw_dot = ((v/self.L)*(math.tan(noise_gamma)))*dt
             x_dot = (v * math.cos(self.theta))*dt
             y_dot = (v * math.sin(self.theta))*dt
@@ -80,19 +77,20 @@ class Bicycle():
 
         self.distance_error = math.sqrt(delta_x2 + delta_y2) - self.distance
 
-    def drive_open_loop(self, fault, color):
+    def drive_open_loop(self):
         self.path_data = []
+        self.drift_angle = 0
         i = 0
 
         while(i != self.max_iter):
             self.path_data.append([self.x, self.y])
             dt = (1.0/self.T)
-            self.dynamics(0.36, -0.00023410732856159566, dt)
+            self.dynamics(0.36, -0.00615835, dt)
             i += 1
 
         path = np.asarray(self.path_data)
         #print(path.shape)
-        plt.scatter(path[:, 0], path[:, 1], color=color)
+        plt.scatter(path[:, 0], path[:, 1])
         plt.xlabel("x (meters)")
         plt.ylabel("y (meters)")
         plt.title("UGV Path: Problem 1.a)")
@@ -100,6 +98,9 @@ class Bicycle():
 
     def drive_along_path(self):
         # the target angle of the circular path being followed
+        self.x = 4.0
+        self.y = 0.0
+        self.theta = math.radians(90)
         alpha = math.radians(0)
         cx = 2
         cy = 2

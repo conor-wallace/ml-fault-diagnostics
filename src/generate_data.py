@@ -9,7 +9,7 @@ from drift_optimizer import Drift_Optimizer
 from bicycle import Bicycle
 
 def compute_drift_dist(optimizer, visualize=False):
-    plt.style.use('fivethirtyeight')
+    plt.style.use('seaborn')
     data = pd.read_csv("C:/Users/conor/OneDrive/Documents/Projects/Fault Diagnostics/network_faults/data/noise_data.csv")
     dataset = data.to_numpy()
 
@@ -75,19 +75,20 @@ def compute_drift_dist(optimizer, visualize=False):
     right_mean, right_std = np.mean(right_drift[:, 0]), np.std(right_drift[:, 0])
     right_severe_mean, right_severe_std = np.mean(right_severe_drift[:, 0]), np.std(right_severe_drift[:, 0])
 
-    drift_distributions = [[healthy_mean, healthy_std],
-                           [left_mean, left_std],
-                           [right_mean, right_std],
-                           [right_severe_mean, right_severe_std]]
+    drift_distributions = [[healthy_mean, healthy_std, 'healthy'],
+                           [left_mean, left_std, 'left'],
+                           [right_mean, right_std, 'right'],
+                           [right_severe_mean, right_severe_std, 'right severe']]
 
     return drift_distributions
 
 def get_synthetic_data(distributions):
-    for dist in distributions:
+    for dist in distributions[:-1]:
         drift_angle = np.random.normal(dist[0], dist[1])
         print("Synthetic Drift Angle: ", drift_angle)
 
         model = Bicycle(drift_angle)
+        # model.drive_open_loop()
         model.drive_along_path()
 
         ideal_model = Bicycle()
@@ -96,7 +97,11 @@ def get_synthetic_data(distributions):
         error_data = ideal_model.path_data - model.path_data
 
         # Plot results
-        plt.scatter(np.arange(error_data.shape[0]), error_data[:, 0])
+        # plt.plot(ideal_model.path_data[:, 0], ideal_model.path_data[:, 1])
+        # plt.show()
+        window = 0
+        plt.scatter(np.arange(window, error_data.shape[0]), error_data[window:, 0], label=dist[2])
+    plt.legend()
     plt.show()
 
 if __name__ == "__main__":

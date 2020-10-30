@@ -2,8 +2,8 @@ import math
 import numpy as np
 
 class PID():
-    def __init__(self, fault):
-        self.k = np.array([[4.77513214e-01, 7.21466250e-03, 2.71819786e+01, 3.72521390e+00, 2.31961582e+00, 1.64713994e+01]])
+    def __init__(self):
+        self.k = np.array([[0.5, 0.007, 0, 3.75, 0, 0]])
         self.velocity = 0
         self.steering = 0
         self.last_d = 0
@@ -12,8 +12,6 @@ class PID():
         self.Integral_theta = 0
         self.d_max = 1.0
         self.theta_max = math.radians(38)
-        self.fitness = 0
-        self.fault = fault
 
     def calculatePID(self, distance, heading, dt):
         self.Integral_d = self.Integral_d + distance
